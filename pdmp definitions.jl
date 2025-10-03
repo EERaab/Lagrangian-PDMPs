@@ -17,6 +17,32 @@ end
     reversed::Bool = false
 end
 
+#PDMPs are defined by evolving according to some dynamic along a segment (or instantaneously at events). 
+#There are many possible dynamics, but each path segment (and every event) follows one or another.
+abstract type DynType
+end
+
+#Depending on the dynamic we have different evaluations.
+@kwdef mutable struct PathSegmentValues{N, T<:DynType}
+    dyn::T
+    time::Float64 = 0.0
+    forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
+    reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
+    forward_rate_integral::Float64 = 0.0
+    reverse_rate_integral::Float64 = 0.0
+end
+
+#We shall want to reuse our PathSegmentValues for repeated evolutions according to the same dynamics
+#Therefore we build a DiGraph to encode the possible transitions and states.
+struct MethodDiGraph{F}
+    vertices::Vector{PathSegmentValues}
+    edges::Vector{F}
+end
+
+
+
+
+
 #Each PDMP has a corresponding "reversed" PDMP. Sometimes it is useful to construct the reverse.
 function reverse(pdmp::PDMP)
     return PDMP(pdmp.method, pdmp.target, !pdmp.reversed)

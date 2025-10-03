@@ -1,16 +1,17 @@
 include("definitions.jl")
 
-function evaluate_segment!(pdmp::PDMP, state::BinaryState, evolution_data::EvolutionData, numerics::NumericalParameters, dyn_type::PositionVelocity; max_duration::Float64 = 0.0)
+function evaluate_segment!(segment::PathSegmentValues, pdmp::PDMP, state::BinaryState, evolution_data::EvolutionData, numerics::NumericalParameters; max_duration::Float64 = 0.0)
     #We pick a stopping threshold randomly.
     threshold = -log(rand())
 
+    #DEPRECATED
     #We set up the initial segment.
     #Depending on the PDMP we can have many different rates.    
     segment = PathSegmentValues{typeof(pdmp.method), rate_number(pdmp, dyn_type)}(dyn = dyn_type)
 
     #We update the state and forward rate and its integral until we reach termination, i.e. the max time or the threshold. A zero max_time means we do not bound time.
     update_position!(pdmp, segment, state, max_duration, evolution_data, numerics, threshold, numerics.position_method)
-    forward_i = segment.forward_rate_integral
+
     #We store the current position. In the backwards iteration it is altered.
     evolution_data.fwd_position .= state.position
     time = segment.time
@@ -22,6 +23,9 @@ function evaluate_segment!(pdmp::PDMP, state::BinaryState, evolution_data::Evolu
     state.position .= evolution_data.fwd_position
     segment.time = time
     if segment.terminal
+        if segment.time < max_duration
+            error("Max time achieved without duration!")
+        end
         return segment, Terminal() 
     end
     new_dyn = select_dynamic(segment)

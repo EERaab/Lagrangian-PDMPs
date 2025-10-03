@@ -1,7 +1,3 @@
-#PDMPs are defined by evolving according to some dynamic along a segment (or instantaneously at events). 
-#There are many possible dynamics, but each path segment (and every event) follows one or another.
-abstract type DynType
-end
 
 #If we are done with evolution then it is sometimes useful to set the new type to be a special type.
 struct Terminal<:DynType
@@ -33,18 +29,5 @@ struct GradientReflection{K<:PDMP_Method}<:VelocityDyn
 end
 
 
-#Every path segment needs to encode a few bits of information to compute an acceptance rate factor (ARF).
-#The rates are given as a (mutable) static array
-@kwdef mutable struct PathSegmentValues{K<:PDMP_Method, N}
-    dyn::DynType
-    time::Float64 = 0.0
-    forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
-    reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
-    forward_rate_integral::Float64 = 0.0
-    reverse_rate_integral::Float64 = 0.0
-    terminal::Bool = false
-end
-
-include("Instant velocity methods/gradient reflection.jl")
 include("ODE-based velocity methods/velocity ODE.jl")
 include("Velocity-based position methods/evaluation.jl")
