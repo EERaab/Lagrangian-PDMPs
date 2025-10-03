@@ -30,6 +30,7 @@ struct LagrangianEvoData{T}<:EvolutionData{Lagrangian_Method} where T<:EvoTensor
     point_data::PointData
     spectral_data::SpectralData
     evo_tensors::T
+    fwd_position::Vector{Float64} #used in backkward integral approximations
     trash_vec::Vector{Float64} #used to compute matrix products while avoiding allocations
 end
 

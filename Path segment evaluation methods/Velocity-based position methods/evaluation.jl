@@ -12,14 +12,14 @@ function evaluate_segment!(pdmp::PDMP, state::BinaryState, evolution_data::Evolu
     update_position!(pdmp, segment, state, max_duration, evolution_data, numerics, threshold, numerics.position_method)
     forward_i = segment.forward_rate_integral
     #We store the current position. In the backwards iteration it is altered.
-    position = copy.(state.position)
+    evolution_data.fwd_position .= state.position
     time = segment.time
 
     #We update the reverse integral and reverse rate for the time.
     compute_backward_approximated_integral!(pdmp, segment, state, evolution_data, numerics, numerics.position_method)
     
     #We restore the end position and time.
-    state.position .= position
+    state.position .= evolution_data.fwd_position
     segment.time = time
     if segment.terminal
         return segment, Terminal() 

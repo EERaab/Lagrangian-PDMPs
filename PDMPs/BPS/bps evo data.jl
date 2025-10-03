@@ -1,5 +1,6 @@
 struct BPSEvoData<:EvolutionData{BPS_Method}
     gradient::Vector{Float64}
+    fwd_position::Vector{Float64} #used in backkward integral approximations
 end
 
 function initialize_evolution_data(pdmp::PDMP{<:BPS_Method})
