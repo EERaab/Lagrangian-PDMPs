@@ -26,7 +26,16 @@ function update_position!(pdmp::PDMP{T}, segment::PathSegmentValues{T, N},
 
         
         #We compute the adapted step size
-        mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        #Old version when rho and fwd_rho were arrays
+        #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        M = -Inf
+        @inbounds for i in eachindex(rho)
+            L =  abs(rho[i]-fwd_rho[i])
+            if L > M
+                M = L
+            end
+        end
+        mult = sqrt(tol/(h*M))
         if mult > position_method.max_adaptive_rel_size
             ϵ = position_method.max_adaptive_rel_size*h
         elseif mult < (position_method.max_adaptive_rel_size)^(-1)
@@ -93,7 +102,16 @@ function compute_backward_approximated_integral!(pdmp::PDMP{T}, segment::PathSeg
         fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, PositionVelocity(), adaptive = true, reverse = true)
 
         #We compute the adapted step size
-        mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        #Old version for when rho/fwd_rho were arrays
+        #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        M = -Inf
+        @inbounds for i in eachindex(rho)
+            L =  abs(rho[i]-fwd_rho[i])
+            if L > M
+                M = L
+            end
+        end
+        mult = sqrt(tol/(h*M))
         if mult > position_method.max_adaptive_rel_size
             ϵ = position_method.max_adaptive_rel_size*h
         elseif mult < (position_method.max_adaptive_rel_size)^(-1)

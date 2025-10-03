@@ -9,7 +9,7 @@ function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::BinaryState
     #We determine the value of rho which fully determines the rate.
     gr = dot(evolution_data.point_data.gradient, state.auxiliary)
     #gr = evolution_data.point_data.gradient'*state.auxiliary
-    t1,t2 = rho_point_values(evolution_data, gr, state.auxiliary)
+    t1, t2 = rho_point_values(evolution_data, gr, state.auxiliary)
     
     #Finally we return the apropriate rate, depending on our pdmp and possible reversal.
     if (pdmp.reversed && reverse)||(!pdmp.reversed && !reverse)
@@ -18,7 +18,7 @@ function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::BinaryState
         rates[2] = max(0, t2)
         #If we use adaptive methods we will adapt not based on the rates but on the "signed" rates, which must be returned
         if adaptive
-            return @MVector [t1, t2]
+            return t1, t2
         end
         return rates
     end
@@ -26,7 +26,7 @@ function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::BinaryState
     rates[1] = max(0, -t1)
     rates[2] = max(0, -t2)
     if adaptive 
-        return @MVector [-t1, -t2]
+        return -t1, -t2
     end
     return rates
 end
