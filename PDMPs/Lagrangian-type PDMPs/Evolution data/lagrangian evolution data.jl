@@ -41,8 +41,9 @@ function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method})
     ini_pd = initialize_point_data(dim)
     ini_sd = initialize_spectral_data(dim)
     ini_et = initialize_evo_tensors(pdmp)
+    ini_fp = zeros(Float64, dim)
     ini_tv = zeros(Float64, dim)
-    return LagrangianEvoData(ini_pd, ini_sd, ini_et, ini_tv)
+    return LagrangianEvoData(ini_pd, ini_sd, ini_et, ini_fp, ini_tv)
 end
 
 #EVO tensors has been moved into the PDMPs.

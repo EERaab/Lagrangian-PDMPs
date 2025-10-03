@@ -4,7 +4,7 @@ struct BPSEvoData<:EvolutionData{BPS_Method}
 end
 
 function initialize_evolution_data(pdmp::PDMP{<:BPS_Method})
-    return BPSEvoData(zeros(Float64, pdmp.target.dimension))
+    return BPSEvoData(zeros(Float64, pdmp.target.dimension), zeros(Float64, pdmp.target.dimension))
 end
 
 function fetch_evo_data!(pdmp::PDMP{<:BPS_Method}, evo_data::BPSEvoData, numerics::NumericalParameters, state::BinaryState, dyn_type::DynType)
