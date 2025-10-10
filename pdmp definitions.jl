@@ -59,14 +59,14 @@ end
 
 #For all PDMPS we consider we shall use binary states where we have a position and an auxiliary that is the velocity.
 #In principle the auxiliary could be the momentum or some such, hence the unfortunate naming convention.
-struct BinaryState
+struct SplitState
     position::Array{Float64,1}
     auxiliary::Array{Float64,1}
 end
 
 #It is useful to be able to initialize a binary state for a PDMP.
 function initialize_binary_state!(pdmp::PDMP{T}, evo_data::EvolutionData, numerics::NumericalParameters; initial_position::Vector{Float64} = rand(pdmp.target.dimension)) where T<:PDMP_Method
-    return BinaryState(initial_position, sample_auxiliary!(pdmp, initial_position, evo_data, numerics))
+    return SplitState(initial_position, sample_auxiliary!(pdmp, initial_position, evo_data, numerics))
 end
 
 #All PDMP methods will need to compute derivatives. How this is done can be define by some Differentiation Method

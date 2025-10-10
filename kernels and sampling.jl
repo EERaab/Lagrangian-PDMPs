@@ -10,6 +10,6 @@
 #end
 #MOVED TO auxiliary kernel of BPS resp. Lagrangian Methods for specialized functionality.
 
-function full_density_kernel!(pdmp::PDMP, state::BinaryState, evolution_data::EvolutionData, numerics::NumericalParameters)
+function full_density_kernel!(pdmp::PDMP, state::SplitState, evolution_data::EvolutionData, numerics::NumericalParameters)
     return exp(pdmp.target.log_density(state.position))*auxiliary_kernel!(pdmp, state, evolution_data, numerics)
 end

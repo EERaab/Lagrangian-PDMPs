@@ -55,7 +55,7 @@ end
 
 
 #We typically use ForwardDiff
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::BinaryState, diff_method::ForwardDer, dyn_type::Union{VelocityODE{T}, GradientReflection{T}}) where T<:Version6_2
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::ForwardDer, dyn_type::Union{VelocityODE{T}, GradientReflection{T}}) where T<:Version6_2
 
     #We introduce a shorthand
     log_density = pdmp.target.log_density
@@ -77,7 +77,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method
 end
 
 #We can use analytical derivatives
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::BinaryState, diff_method::AnalyticalDer, dyn_type::Union{VelocityODE{T}, GradientReflection{T}}) where T<:Version6_2
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::AnalyticalDer, dyn_type::Union{VelocityODE{T}, GradientReflection{T}}) where T<:Version6_2
     diff_method.hessian!(point_data.velocity_update_data.value, state.position)
 
     #We compute the gradient if we're doing a gradien reflection.
@@ -90,7 +90,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method
     nothing
 end
 
-function fetch_evo_data!(pdmp::PDMP{Version6_2}, evo_data::LagrangianEvoData, nums::NumericalParameters, state::BinaryState, dyn::Union{GradientReflection{Version6_2}, VelocityODE{Version6_2}})
+function fetch_evo_data!(pdmp::PDMP{Version6_2}, evo_data::LagrangianEvoData, nums::NumericalParameters, state::SplitState, dyn::Union{GradientReflection{Version6_2}, VelocityODE{Version6_2}})
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evo_data.point_data, pdmp, state, nums.diff_method, dyn)
     

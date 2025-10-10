@@ -1,4 +1,4 @@
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::BinaryState, diff_method::ForwardDer, dyn_type::PositionVelocity)
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::ForwardDer, dyn_type::PositionVelocity)
     #We introduce a shorthand
     log_density = pdmp.target.log_density
 
@@ -13,7 +13,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method
     nothing
 end
 
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::BinaryState, diff_method::AnalyticalDer, dyn_type::PositionVelocity)
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::AnalyticalDer, dyn_type::PositionVelocity)
     diff_method.gradient!(point_data.gradient, state.position)
 
     diff_method.hessian!(point_data.position_update_data.value, state.position)

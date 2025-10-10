@@ -1,4 +1,4 @@
-
+using StaticArrays
 abstract type DynType
 end
 
@@ -39,19 +39,23 @@ end
     #They contain a transition function that tells us what the state transforms into.
     #Edges pointing from the i:th vertex are in mth_dg.edges[i], 
     #Here mth_dg.edges[i][j] corresponds to the j:th transition of the i:th vertex, 
-    #which has a rate given by mth_dg.segments[mth_dg.vertex[i].segment_number].forward_rates
+    #which has a rate given by mth_dg.segments[mth_dg.vertex[i].segment_number].forward_rates[j]
 
     struct MethodVertex{D<:DynType}
         dynamic::D
         segment_number::Int64
     end
 
+    #We take the edges to carry both the target and base vertex, i.e. each edge is a e = (α → β)
+    #and so we expect mth_dg.edges[i] = {e ∈ edge_set | e = i → β for some β}.
+
     struct MethodEdge{T<:TransitionType}
+        base_vertex_number::Int64
         target_vertex_number::Int64
         transition::T
     end
     
-    @kwdef struct Segment{N}
+    @kwdef mutable struct Segment{N}
         time::Float64 = 0.0
         forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
         reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
@@ -59,11 +63,21 @@ end
         reverse_rate_integral::Float64 = 0.0
     end
 
-struct MethodDiGraph
+    function reset_segment!(seg::Segment)
+        seg.time *= 0.0
+        seg.forward_rates .*= 0.0
+        seg.reverse_rates .*= 0.0
+        seg.forward_rate_integral *= 0.0
+        seg.reverse_rate_integral *= 0.0
+        return seg
+    end
+
+struct PDMP_DiGraph
     vertices::Vector{MethodVertex}
     edges::Vector{Vector{MethodEdge}}
     segments::Vector{Segment}
 end
+
 
 #We define targets:
 struct TargetData{F} 
@@ -75,18 +89,39 @@ end
 abstract type PDMP_Method
 end
 
-#We can now define PDMPs:
+#We can now define PDMPs.
+#We shall let the PDMP and its graph also represent the reversed PDMP, since we assume the two are closely related.
+#For example we know, that there exists a map 'reverse' on the edge set of the graph
+# that associates to each edge E another edge E' such that EE'(x) = x and E'E(y) = y. 
 @kwdef struct PDMP{T<:PDMP_Method}
     method::T
     target::TargetData
-    graph::MethodDiGraph = generate_method_graph(method, target)
-    reversed::Bool = false
+    graph::PDMP_DiGraph = generate_pdmp_graph(method, target)
 end
 
-#The reversal of a PDMP is useful to construct:
-function reverse(pdmp::PDMP)
-    return PDMP(pdmp.method, pdpmp.target, pdmp.graph, !pdmp.reversed)
+#Again, by assumption the reversed PDMP has the same transitions we can get the reverse edges.
+#Explicitly if e = α → β through transition T, then e_rev = β → α through T. 
+#Rather than returning e_rev (which would be necessary if e_rev had a different transition from e)
+#we return k s.t. graph.edges[e.target_vertex_number][k] = e_rev
+function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)
+    n = edge.target_vertex_number
+    k = 1
+    for alt_edge in graph.edges[n]
+        if alt_edge.target_vertex_number !== edge.base_vertex_number 
+            k+=1
+            continue
+        end
+        if alt_edge.transition !== edge.transition
+            k+=1
+            continue
+        end
+        return k #so that graph.edges[n][k] = alt_edge
+    end
+    #Unless we've made a mistake there will be some edge that is the reversed edge.
+    error("No reversed edge could be found.")
+    return false
 end
+
 
 #The PDMPs will have states that transform as we go along.
 struct SplitState
@@ -104,11 +139,25 @@ end
 abstract type EvolutionData
 end
 
+abstract type DifferentiationMethod
+end
+
+struct ForwardDer<:DifferentiationMethod
+end
+
+#This part below needs reworking
+struct AnalyticalDer{F1,F2,F3,F4}<:DifferentiationMethod
+    gradient!::F1
+    hessian!::F2
+    third_order_directional!::F3
+    third_order_full!::F4
+end
+
 
 function initialize_state!(pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters; 
-    initial_pos = rand(pdmp.target.dimension), 
-    initial_aux = sample_auxiliary!(pdmp, initial_pos, evo_data, nums),
-    initial_splindex = 1)
+    initial_position = rand(pdmp.target.dimension), 
+    initial_auxiliary = sample_auxiliary!(pdmp, initial_position, evo_data, nums),
+    initial_split_index = 1)
     
-    return SplitState(initial_pos, initial_aux, initial_splindex)
+    return SplitState(initial_position, initial_auxiliary, initial_split_index)
 end

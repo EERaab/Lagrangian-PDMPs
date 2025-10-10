@@ -36,7 +36,7 @@ function sample_auxiliary!(pdmp::PDMP{<:Lagrangian_Method}, position::Array{Floa
 end
 
 
-function auxiliary_kernel!(pdmp::PDMP{<:Lagrangian_Method}, state::BinaryState, evo_data::LagrangianEvoData, numerics::NumericalParameters)
+function auxiliary_kernel!(pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, evo_data::LagrangianEvoData, numerics::NumericalParameters)
     #We determine the hessian
     fetch_hessian!(evo_data.point_data, pdmp.target.log_density, state.position, numerics.diff_method)
     

@@ -8,7 +8,7 @@ function visualize_2D_density(log_pdfunc::Function; xs = range(-3,3,length=100),
 end
 
 function plot_algorithm_run(pdmp::PDMP, x_marginal::Function, 
-    y_marginal::Function, initial_state::BinaryState, numerics::NumericalParameters; point_number::Int = 10, max_time::Float64 = 1.0,
+    y_marginal::Function, initial_state::SplitState, numerics::NumericalParameters; point_number::Int = 10, max_time::Float64 = 1.0,
     only_marginal::Bool = false, verbose::Bool = true)  
       
     states, acceptances = algorithm(pdmp, numerics, initial_state = initial_state, point_number = point_number, use_correction = true, max_time = max_time);

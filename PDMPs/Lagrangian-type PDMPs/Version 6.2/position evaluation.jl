@@ -1,4 +1,4 @@
-function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::BinaryState, evolution_data::LagrangianEvoData{EvoTensorsVersion6_2}, numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
+function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::SplitState, evolution_data::LagrangianEvoData{EvoTensorsVersion6_2}, numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evolution_data.point_data, pdmp, state, numerics.diff_method, dyn)
     

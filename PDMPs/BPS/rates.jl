@@ -1,4 +1,4 @@
-function fetch_rates!(rates::MVector, pdmp::PDMP{BPS}, state::BinaryState, evolution_data::BPSEvoData, numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
+function fetch_rates!(rates::MVector, pdmp::PDMP{BPS}, state::SplitState, evolution_data::BPSEvoData, numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
     fetch_evo_data!(pdmp, evolution_data, numerics, state, dyn)
 
     k = -dot(evolution_data.gradient, state.auxiliary)

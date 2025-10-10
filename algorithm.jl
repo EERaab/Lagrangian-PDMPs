@@ -1,10 +1,10 @@
 
 """
-    new_point!(pdmp::PDMP, rev_pdmp::PDMP, state::BinaryState, evolution_data::EvolutionData, numerics::NumericalParameters, max_time::Float64, save_skeleton::Bool = false)
+    new_point!(pdmp::PDMP, rev_pdmp::PDMP, state::SplitState, evolution_data::EvolutionData, numerics::NumericalParameters, max_time::Float64, save_skeleton::Bool = false)
 
 Returns a new point for a PDMP together with its acceptance (to be used in the Metropolis correction).
 """
-function new_point!(pdmp::PDMP, rev_pdmp::PDMP, state::BinaryState, evolution_data::EvolutionData, numerics::NumericalParameters, max_time::Float64, save_skeleton::Bool = false)
+function new_point!(pdmp::PDMP, rev_pdmp::PDMP, state::SplitState, evolution_data::EvolutionData, numerics::NumericalParameters, max_time::Float64, save_skeleton::Bool = false)
     #We start our "clock" at t = 0 and terminate at t = max_time
     time = 0.0
 
@@ -97,7 +97,7 @@ end
     point_number::Integer = 10,
     max_time::Float64 = 1.0,                
     max_computation_time::Float64 = Inf,    
-    initial_state::Union{Nothing,BinaryState} = nothing,
+    initial_state::Union{Nothing,SplitState} = nothing,
     use_correction::Bool = true,
 )
 
@@ -108,13 +108,13 @@ function algorithm(
     nums::NumericalParameters;
     point_number::Integer = 10,
     max_time::Float64 = 1.0,                # stochastic integration time
-    initial_state::Union{Nothing, BinaryState} = nothing,
+    initial_state::Union{Nothing, SplitState} = nothing,
     use_correction::Bool = true,
 )
 
     k = 0
     n_evt = 0
-    state_list = BinaryState[]
+    state_list = SplitState[]
     acceptances = Float64[]
     rev_pdmp = reverse(pdmp)
     evo_data = initialize_evolution_data(pdmp)

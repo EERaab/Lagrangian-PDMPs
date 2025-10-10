@@ -1,4 +1,4 @@
-function reflect!(state::BinaryState, pdmp::PDMP{Version6_2}, evo_data::EvolutionData)
+function reflect!(state::SplitState, pdmp::PDMP{Version6_2}, evo_data::EvolutionData)
     #We compute the reflection covector
     w = evo_data.point_data.gradient
 
