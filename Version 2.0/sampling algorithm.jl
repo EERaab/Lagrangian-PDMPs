@@ -1,20 +1,18 @@
 #The acceptance rate for each of our pdmps is (structurally) the same
 #(Valid since for each i P_i(t<T) = exp(-∫_[0,T] λ_i(t) dt))
 ####################################################################################################
-function fwd_acceptance(pdmp::PDMP, vertex::MethodVertex, edge_number::Integer)
-    return pdmp.graph.segments[vertex.segment_number].forward_rates[edge_number]
+function fwd_acceptance(segment::Segment, edge_number::Integer)::Float64
+    return segment.forward_rates[edge_number]::Float64
 end
 
-function rev_acceptance(pdmp::PDMP, vertex::MethodVertex, edge_number::Integer)
-    return pdmp.graph.segments[vertex.segment_number].reverse_rates[edge_number]
+function rev_acceptance(segment::Segment, edge_number::Integer)::Float64
+    return segment.reverse_rates[edge_number]::Float64
 end
 
-function select_edge(pdmp::PDMP, state::SplitState)
-    vertex = pdmp.graph.vertices[state.split_index.x]
-    segment = pdmp.graph.segments[vertex.segment_number]
-    q = rand()*sum(segment.forward_rates)
+function select_edge_number(segment::Segment{N})::Int64 where N
+    q = rand()*sum(segment.forward_rates::MVector{N, Float64})
     s = 0.0
-    for i ∈ eachindex(segment.forward_rates)
+    for i ∈ eachindex(segment.forward_rates::MVector{N, Float64})
         s += segment.forward_rates[i]
         if q ≤ s
             return i#The edge: pdmp.graph.edges[state.split_index.x][i]
@@ -72,15 +70,16 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             initial = false
         else
             #We adjust the acceptance by the acceptance rate of the transition of the reverse edge
-            acceptance *= rev_acceptance(pdmp, vertex, rev_edge_number)
+            acceptance *= rev_acceptance(segment, rev_edge_number)
         end
 
         if time < max_time
             #We enter a new state (possibly stochastically) depending on the end state of the segment
             #Notably we assume here that the reversed pdmp can use the forward graph (i.e. that the two are isomorphic in some sense)
-            edge_number = select_edge(pdmp, state)
+            
+            edge_number = select_edge_number(segment)
 
-            acceptance /= fwd_acceptance(pdmp, vertex, edge_number)
+            acceptance /= fwd_acceptance(segment, edge_number)
 
             edge = pdmp.graph.edges[state.split_index.x][edge_number]
             
@@ -98,13 +97,13 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         if isnan(acceptance)
             println("NaN-acceptance")
             @show state
-            @show seg_list
+            #@show seg_list
             error("NaN-accept")
             #should reject the point
         elseif isinf(acceptance)
             println("Inf-acceptance")
             @show state
-            @show seg_list
+            #@show seg_list
             error("Inf-accept")
             #should accept the point if +inf, reject if -inf (though -Inf should be an error)
         end

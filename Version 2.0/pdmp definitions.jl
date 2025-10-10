@@ -63,13 +63,11 @@ end
         reverse_rate_integral::Float64 = 0.0
     end
 
-    function reset_segment!(seg::Segment)
+    function reset_segment!(seg::Segment{N})::Segment{N} where N
         seg.time = 0.0
-        for r in seg.forward_rates
-            r = 0.0
-        end
-        for r in seg.reverse_rates
-            r = 0.0
+        @inbounds for i in eachindex(seg.forward_rates::MVector{N, Float64})
+            seg.forward_rates[i] = 0.0
+            seg.reverse_rates[i] = 0.0
         end
         seg.forward_rate_integral = 0.0
         seg.reverse_rate_integral = 0.0
@@ -86,7 +84,7 @@ end
 #We define targets:
 struct TargetData{F} 
     log_density::F
-    dimension::Integer
+    dimension::Int64
 end
 
 #Together with a PDMP method the target defines a PDMP:
@@ -97,9 +95,9 @@ end
 #We shall let the PDMP and its graph also represent the reversed PDMP, since we assume the two are closely related.
 #For example we know, that there exists a map 'reverse' on the edge set of the graph
 # that associates to each edge E another edge E' such that EE'(x) = x and E'E(y) = y. 
-@kwdef struct PDMP{T<:PDMP_Method}
+@kwdef struct PDMP{T<:PDMP_Method, F}
     method::T
-    target::TargetData
+    target::TargetData{F}
     graph::PDMP_DiGraph = generate_pdmp_graph(method, target)
 end
 
@@ -107,7 +105,7 @@ end
 #Explicitly if e = α → β through transition T, then e_rev = β → α through T. 
 #Rather than returning e_rev (which would be necessary if e_rev had a different transition from e)
 #we return k s.t. graph.edges[e.target_vertex_number][k] = e_rev
-function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)
+function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)::Int64
     n = edge.target_vertex_number
     k = 1
     for alt_edge in graph.edges[n]
@@ -131,7 +129,7 @@ end
 struct SplitState
     position::Vector{Float64} #x
     auxiliary::Vector{Float64} #v (or p)
-    split_index::Ref{Int64} #α - given as a ref so we can mutate the index value
+    split_index::Base.RefValue{Int64} #α - given as a ref so we can mutate the index value
 end
 
 #In a given PDMP there are going to be some numerics dictating how approximations are made
@@ -161,7 +159,7 @@ end
 function initialize_state!(pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters; 
     initial_position = rand(pdmp.target.dimension), 
     initial_auxiliary = sample_auxiliary!(pdmp, initial_position, evo_data, nums),
-    initial_split_index = 1)
+    initial_split_index = Base.RefValue{Int64}(1))
     
     return SplitState(initial_position, initial_auxiliary, initial_split_index)
 end
