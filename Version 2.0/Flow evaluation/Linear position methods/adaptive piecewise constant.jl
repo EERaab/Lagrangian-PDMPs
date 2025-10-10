@@ -12,7 +12,7 @@ function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evol
     
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We should update the rate, but we want to adapt to ρ, not λ. Hence we fetch ρ instead. The actual rate(s) is max(0, ρ) (or max(0,ρ_1), max(0, ρ_2),...)
-        rho = fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, PositionVelocity(), adaptive = true, reversed_pdmp = reversed_pdmp)
+        rho = fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, adaptive = true, reversed_pdmp = reversed_pdmp)
         
         
         #We introduce convient shorthands
@@ -26,7 +26,7 @@ function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evol
             fwd_state.position .= state.position + state.auxiliary*(h/2)
         end
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, PositionVelocity(), adaptive = true, reversed_pdmp = reversed_pdmp)
+        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, adaptive = true, reversed_pdmp = reversed_pdmp)
 
         
         #We compute the adapted step size
@@ -94,7 +94,7 @@ function compute_backward_approximated_integral!(pdmp::PDMP, state::SplitState,
     
     while segment.time > 0
         #We want to determine the adaptive step based on ρ so we fetch ρ instead of the reverse rate λ.
-        rho = fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, PositionVelocity(), adaptive = true, reverse = true, reversed_pdmp = reversed_pdmp)
+        rho = fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, adaptive = true, reverse = true, reversed_pdmp = reversed_pdmp)
         
         #We introduce convient shorthands
         h = position_method.step_guess
@@ -108,7 +108,7 @@ function compute_backward_approximated_integral!(pdmp::PDMP, state::SplitState,
         end
 
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, PositionVelocity(), adaptive = true, reverse = true, reversed_pdmp = reversed_pdmp)
+        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, adaptive = true, reverse = true, reversed_pdmp = reversed_pdmp)
 
         #We compute the adapted step size
         #Old version for when rho/fwd_rho were arrays
