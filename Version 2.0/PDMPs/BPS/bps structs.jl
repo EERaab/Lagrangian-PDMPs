@@ -12,6 +12,5 @@ end
 function generate_pdmp_graph(method::BPS, target::TargetData{F})::PDMP_DiGraph where F
     vertices = [MethodVertex(PositionVelocity(),1)]
     edges = Vector{MethodEdge{GradientReflection}}[[MethodEdge(1,1, GradientReflection())]]
-    segments = [Segment{1}()]
-    return PDMP_DiGraph(vertices, edges, segments)
+    return PDMP_DiGraph(vertices, edges)
 end

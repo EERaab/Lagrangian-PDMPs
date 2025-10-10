@@ -53,7 +53,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
     while time < max_time
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
-        segment = pdmp.graph.segments[vertex.segment_number]
+        segment = evo_data.segments[vertex.segment_rate_number]
         reset_segment!(segment)
         
         #Debugging

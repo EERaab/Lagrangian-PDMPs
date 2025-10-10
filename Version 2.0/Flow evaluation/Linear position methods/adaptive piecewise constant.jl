@@ -1,18 +1,18 @@
 
-function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evolution_data::EvolutionData, 
-    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)
+function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, max_time::Float64, evolution_data::EvolutionData, 
+    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false) where N
     #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     vertex = pdmp.graph.vertices[state.split_index.x]
-    segment = pdmp.graph.segments[vertex.segment_number]
+    #segment = evo_data.segments[vertex.segment_rate_number]
     
     #OPTIMIZE
     fwd_state = evolution_data.adaptive_state# SplitState(similar(state.position), copy.(state.auxiliary))
     fwd_state.auxiliary .= state.auxiliary
-    fwd_rates = similar(segment.forward_rates)
+    fwd_rates = evolution_data.adaptive_fwd_rates
     
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We should update the rate, but we want to adapt to ρ, not λ. Hence we fetch ρ instead. The actual rate(s) is max(0, ρ) (or max(0,ρ_1), max(0, ρ_2),...)
-        rho = fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp)
         
         
         #We introduce convient shorthands
@@ -26,12 +26,14 @@ function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evol
             fwd_state.position .= state.position + state.auxiliary*(h/2)
         end
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
 
         
         #We compute the adapted step size
         #Old version when rho and fwd_rho were arrays
         #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        rho = evolution_data.rho::MVector{N,Float64}
+        fwd_rho = evolution_data.fwd_rho::MVector{N,Float64}
         M = -Inf
         @inbounds for i in eachindex(rho)
             L =  abs(rho[i]-fwd_rho[i])
@@ -81,20 +83,20 @@ function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evol
     return segment
 end
 
-function compute_backward_approximated_integral!(pdmp::PDMP, state::SplitState, 
-    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
+function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}, state::SplitState, 
+    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false) where N   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     #OPTIMIZE
     vertex = pdmp.graph.vertices[state.split_index.x]
-    segment = pdmp.graph.segments[vertex.segment_number]
+    #segment = evo_data.segments[vertex.segment_rate_number]
 
     fwd_state = evolution_data.adaptive_state# SplitState(similar(state.position), copy.(state.auxiliary))
     fwd_state.auxiliary .= state.auxiliary
-    fwd_state = evo_data.adaptive_state
-    fwd_rates = similar(segment.reverse_rates)
+
+    fwd_rates = evolution_data.adaptive_fwd_rates
     
     while segment.time > 0
         #We want to determine the adaptive step based on ρ so we fetch ρ instead of the reverse rate λ.
-        rho = fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp)
         
         #We introduce convient shorthands
         h = position_method.step_guess
@@ -108,11 +110,13 @@ function compute_backward_approximated_integral!(pdmp::PDMP, state::SplitState,
         end
 
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fwd_rho = fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
 
         #We compute the adapted step size
         #Old version for when rho/fwd_rho were arrays
         #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
+        rho = evolution_data.rho::MVector{N,Float64}
+        fwd_rho = evolution_data.fwd_rho::MVector{N,Float64}
         M = -Inf
         @inbounds for i in eachindex(rho)
             L =  abs(rho[i]-fwd_rho[i])

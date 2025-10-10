@@ -4,7 +4,7 @@ function evaluate_flow!(pdmp::PDMP, vertex::MethodVertex{VelocityODE}, state::Sp
     threshold = -log(rand())
     
     #We will manipulate the segment indicated by the vertex.
-    segment = pdmp.graph.segments[vertex.segment_number]
+    segment = evo_data.segments[vertex.segment_rate_number]
 
     #The "parameters" (param) that determine our equation of motion and rates.
     #Typically this may be quite messy to determine, and may require some more general function, but for the two methods (Lagrangian, BPS-Lagrangian) we consider it is sufficient to have

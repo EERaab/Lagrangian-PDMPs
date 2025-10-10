@@ -33,17 +33,15 @@ end
 #The vertices correspond to the α of the paper. As such each should contain a 'Segment' (since for each α we get a type of flow to evaluate), 
 #but there are some isomorphisms between flows, so we get a 'Segment' for each equivalence class ̄α. Therefore we have the vertices contain ̄α 
 #so as to indicate which class they belong to.
-#Concretely, the segment associated to the i:th vertex is mth_dg.segments[mth_dg.vertex[i].segment_number]
 
     #The edges are our transitions between αs (which can act trivially α → α, as in BPS).
     #They contain a transition function that tells us what the state transforms into.
     #Edges pointing from the i:th vertex are in mth_dg.edges[i], 
     #Here mth_dg.edges[i][j] corresponds to the j:th transition of the i:th vertex, 
-    #which has a rate given by mth_dg.segments[mth_dg.vertex[i].segment_number].forward_rates[j]
 
     struct MethodVertex{D<:DynType}
         dynamic::D
-        segment_number::Int64
+        segment_rate_number::Int64
     end
 
     #We take the edges to carry both the target and base vertex, i.e. each edge is a e = (α → β)
@@ -55,31 +53,30 @@ end
         transition::T
     end
     
-    @kwdef mutable struct Segment{N}
-        time::Float64 = 0.0
-        forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
-        reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
-        forward_rate_integral::Float64 = 0.0
-        reverse_rate_integral::Float64 = 0.0
-    end
-
-    function reset_segment!(seg::Segment{N})::Segment{N} where N
-        seg.time = 0.0
-        @inbounds for i in eachindex(seg.forward_rates::MVector{N, Float64})
-            seg.forward_rates[i] = 0.0
-            seg.reverse_rates[i] = 0.0
-        end
-        seg.forward_rate_integral = 0.0
-        seg.reverse_rate_integral = 0.0
-        return seg
-    end
 
 struct PDMP_DiGraph
     vertices::Vector{MethodVertex}
     edges::Vector{Vector{MethodEdge}}
-    segments::Vector{Segment}
 end
 
+@kwdef mutable struct Segment{N}
+    time::Float64 = 0.0
+    forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
+    reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
+    forward_rate_integral::Float64 = 0.0
+    reverse_rate_integral::Float64 = 0.0
+end
+
+function reset_segment!(seg::Segment{N})::Segment{N} where N
+    seg.time = 0.0
+    @inbounds for i in eachindex(seg.forward_rates::MVector{N, Float64})
+        seg.forward_rates[i] = 0.0
+        seg.reverse_rates[i] = 0.0
+    end
+    seg.forward_rate_integral = 0.0
+    seg.reverse_rate_integral = 0.0
+    return seg
+end
 
 #We define targets:
 struct TargetData{F} 
