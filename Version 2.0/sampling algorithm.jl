@@ -49,13 +49,18 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     initial = true
     rev_edge_number = 1
-
+    #When debugging:
+    #st_list = []
+    #seg_list = []
     while time < max_time
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = pdmp.graph.segments[vertex.segment_number]
         reset_segment!(segment)
-
+        
+        #Debugging
+        #push!(st_list, SplitState(copy.(state.position), copy.(state.auxiliary), 1))
+        
         #We follow the flow for a time Δt
         #This updates the reverse and forward rates, as well as the corresponding integrals
         evaluate_flow!(pdmp, vertex, state, evo_data, nums, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
@@ -63,7 +68,6 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
         
-
         if initial
             initial = false
         else
@@ -86,21 +90,21 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             transition!(state, pdmp, evo_data, nums, edge)
             
         end
-
+        #Debugging:
+        #push!(seg_list, Segment(segment.time, segment.forward_rates, segment.reverse_rates, segment.forward_rate_integral, segment.reverse_rate_integral))
+        
         #If the acceptance is Infinite or NaN we should not keep going
         #This happens when either 1) fwd acceptance/rate is zero
         if isnan(acceptance)
             println("NaN-acceptance")
-            @show pdmp
-            @show vertex
-            @show edge_number
+            @show state
+            @show seg_list
             error("NaN-accept")
             #should reject the point
         elseif isinf(acceptance)
             println("Inf-acceptance")
-            @show pdmp
-            @show vertex
-            @show edge_number
+            @show state
+            @show seg_list
             error("Inf-accept")
             #should accept the point if +inf, reject if -inf (though -Inf should be an error)
         end

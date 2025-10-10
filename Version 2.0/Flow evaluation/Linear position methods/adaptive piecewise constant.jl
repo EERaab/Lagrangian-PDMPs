@@ -82,7 +82,7 @@ function update_position!(pdmp::PDMP, state::SplitState, max_time::Float64, evol
 end
 
 function compute_backward_approximated_integral!(pdmp::PDMP, state::SplitState, 
-    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant, reversed_pdmp::Bool = false)   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
+    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     #OPTIMIZE
     vertex = pdmp.graph.vertices[state.split_index.x]
     segment = pdmp.graph.segments[vertex.segment_number]

@@ -18,7 +18,7 @@ function evaluate_flow!(pdmp::PDMP, vertex::MethodVertex{PositionVelocity}, stat
     time = segment.time
 
     #We update the reverse integral and reverse rate for the time.
-    compute_backward_approximated_integral!(pdmp, state, evo_data, numerics, numerics.position_method)
+    compute_backward_approximated_integral!(pdmp, state, evo_data, numerics, numerics.position_method, reversed_pdmp = reversed_pdmp)
     
     #We restore the end position and time.
     state.position .= evo_data.fwd_position

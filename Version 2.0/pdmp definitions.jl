@@ -64,11 +64,15 @@ end
     end
 
     function reset_segment!(seg::Segment)
-        seg.time *= 0.0
-        seg.forward_rates .*= 0.0
-        seg.reverse_rates .*= 0.0
-        seg.forward_rate_integral *= 0.0
-        seg.reverse_rate_integral *= 0.0
+        seg.time = 0.0
+        for r in seg.forward_rates
+            r = 0.0
+        end
+        for r in seg.reverse_rates
+            r = 0.0
+        end
+        seg.forward_rate_integral = 0.0
+        seg.reverse_rate_integral = 0.0
         return seg
     end
 
