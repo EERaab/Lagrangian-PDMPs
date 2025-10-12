@@ -39,24 +39,26 @@ end
     #Edges pointing from the i:th vertex are in mth_dg.edges[i], 
     #Here mth_dg.edges[i][j] corresponds to the j:th transition of the i:th vertex, 
 
-    struct MethodVertex{D<:DynType}
-        dynamic::D
+    struct MethodVertex
+        dynamic_number::Int64
         segment_rate_number::Int64
     end
 
     #We take the edges to carry both the target and base vertex, i.e. each edge is a e = (α → β)
     #and so we expect mth_dg.edges[i] = {e ∈ edge_set | e = i → β for some β}.
 
-    struct MethodEdge{T<:TransitionType}
+    struct MethodEdge
         base_vertex_number::Int64
         target_vertex_number::Int64
-        transition::T
+        transition_number::Int64
     end
     
 
-struct PDMP_DiGraph
+struct PDMP_DiGraph{D<:Tuple,T<:Tuple}
     vertices::Vector{MethodVertex}
     edges::Vector{Vector{MethodEdge}}
+    dynamics::D
+    transitions::T
 end
 
 @kwdef mutable struct Segment{N}
@@ -92,10 +94,10 @@ end
 #We shall let the PDMP and its graph also represent the reversed PDMP, since we assume the two are closely related.
 #For example we know, that there exists a map 'reverse' on the edge set of the graph
 # that associates to each edge E another edge E' such that EE'(x) = x and E'E(y) = y. 
-@kwdef struct PDMP{T<:PDMP_Method, F}
-    method::T
+@kwdef struct PDMP{M<:PDMP_Method, F, D<:Tuple,T<:Tuple}
+    method::M
     target::TargetData{F}
-    graph::PDMP_DiGraph = generate_pdmp_graph(method, target)
+    graph::PDMP_DiGraph{D,T} = generate_pdmp_graph(method, target)
 end
 
 #Again, by assumption the reversed PDMP has the same transitions we can get the reverse edges.
@@ -110,7 +112,7 @@ function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)::Int64
             k+=1
             continue
         end
-        if alt_edge.transition !== edge.transition
+        if alt_edge.transition_number !== edge.transition_number
             k+=1
             continue
         end

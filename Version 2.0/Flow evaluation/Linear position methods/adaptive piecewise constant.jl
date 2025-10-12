@@ -1,8 +1,8 @@
-
 function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, max_time::Float64, evolution_data::EvolutionData, 
-    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false) where N
+    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)::Nothing where N
     #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     vertex = pdmp.graph.vertices[state.split_index.x]
+    dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
     
     #OPTIMIZE
@@ -12,7 +12,7 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
     
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We should update the rate, but we want to adapt to ρ, not λ. Hence we fetch ρ instead. The actual rate(s) is max(0, ρ) (or max(0,ρ_1), max(0, ρ_2),...)
-        fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, dyn, reversed_pdmp = reversed_pdmp)
         
         
         #We introduce convient shorthands
@@ -21,19 +21,17 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
 
         #We compute the forward state position
         if reversed_pdmp
-            fwd_state.position .= state.position - state.auxiliary*(h/2)
+            fwd_state.position .= state.position .- (state.auxiliary .* (h/2))
         else
-            fwd_state.position .= state.position + state.auxiliary*(h/2)
+            fwd_state.position .= state.position .+ (state.auxiliary .* (h/2))
         end
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
+        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, dyn, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
 
         
         #We compute the adapted step size
-        #Old version when rho and fwd_rho were arrays
-        #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
-        rho = evolution_data.rho::MVector{N,Float64}
-        fwd_rho = evolution_data.fwd_rho::MVector{N,Float64}
+        rho = evolution_data.rho
+        fwd_rho = evolution_data.fwd_rho
         M = -Inf
         @inbounds for i in eachindex(rho)
             L =  abs(rho[i]-fwd_rho[i])
@@ -69,24 +67,25 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         segment.time += Δt
         segment.forward_rate_integral += ΔI*Δt
         if reversed_pdmp
-            state.position .-= state.auxiliary*Δt
+            state.position .-= (state.auxiliary.*Δt)
         else
-            state.position .+= state.auxiliary*Δt
+            state.position .+= (state.auxiliary.*Δt)
         end
         
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled by the condition in the while-loop
         if ϵ > Δt   
-            return segment
+            return nothing
         end
     end
-    return segment
+    return nothing
 end
 
 function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}, state::SplitState, 
-    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false) where N   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
+    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)::Nothing where N   #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     #OPTIMIZE
     vertex = pdmp.graph.vertices[state.split_index.x]
+    dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
 
     fwd_state = evolution_data.adaptive_state# SplitState(similar(state.position), copy.(state.auxiliary))
@@ -96,7 +95,7 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
     
     while segment.time > 0
         #We want to determine the adaptive step based on ρ so we fetch ρ instead of the reverse rate λ.
-        fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, dyn, reverse = true, reversed_pdmp = reversed_pdmp)
         
         #We introduce convient shorthands
         h = position_method.step_guess
@@ -104,19 +103,17 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
 
         #We compute the forward state position
         if reversed_pdmp
-            fwd_state.position .= state.position + state.auxiliary*(h/2)
+            fwd_state.position .= state.position .+ (state.auxiliary .*(h/2))
         else
-            fwd_state.position .= state.position - state.auxiliary*(h/2)
+            fwd_state.position .= state.position .- (state.auxiliary .* (h/2))
         end
 
         #We compute the forward rate at the forward state. Note that this overwrites the evolution data.
-        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
+        fetch_rates!(fwd_rates, pdmp, fwd_state, evolution_data, numerics, dyn, reverse = true, reversed_pdmp = reversed_pdmp, adaptive_fwd = true)
 
         #We compute the adapted step size
-        #Old version for when rho/fwd_rho were arrays
-        #mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
-        rho = evolution_data.rho::MVector{N,Float64}
-        fwd_rho = evolution_data.fwd_rho::MVector{N,Float64}
+        rho = evolution_data.rho
+        fwd_rho = evolution_data.fwd_rho
         M = -Inf
         @inbounds for i in eachindex(rho)
             L =  abs(rho[i]-fwd_rho[i])
@@ -140,16 +137,16 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
         segment.time -= Δt
         segment.reverse_rate_integral += sum(segment.reverse_rates)*Δt
         if reversed_pdmp
-            state.position .+= state.auxiliary*Δt
+            state.position .+= (state.auxiliary .* Δt)
         else
-            state.position .-= state.auxiliary*Δt
+            state.position .-= (state.auxiliary .* Δt)
         end
         
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled in the while-loop condition
         if ϵ > Δt   
-            return segment
+            return nothing
         end
     end
-    return segment
+    return nothing
 end

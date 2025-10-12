@@ -1,11 +1,12 @@
 function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, max_time::Float64, 
     evolution_data::EvolutionData, numerics::NumericalParameters, threshold::Float64, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false) where N
     vertex = pdmp.graph.vertices[state.split_index.x]
+    dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
 
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We update the forward rate.
-        fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, dyn, reversed_pdmp = reversed_pdmp)
         if any(isnan.(segment.forward_rates))
             @show state
             @show evolution_data
@@ -47,10 +48,11 @@ end
 function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}, state::SplitState, 
     evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false) where N
     vertex = pdmp.graph.vertices[state.split_index.x]
+    dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
     while segment.time > 0
         #We update the reverse rates
-        fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, vertex.dynamic, reverse = true, reversed_pdmp = reversed_pdmp)
+        fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, dyn, reverse = true, reversed_pdmp = reversed_pdmp)
 
         #The step size is set to ensure we are not exceeding our termination time.
         Δt = min(segment.time, position_method.step_size)

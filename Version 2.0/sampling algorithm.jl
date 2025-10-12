@@ -54,6 +54,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = evo_data.segments[vertex.segment_rate_number]
+        dyn = pdmp.graph.dynamics[vertex.dynamic_number]
         reset_segment!(segment)
         
         #Debugging
@@ -61,7 +62,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         
         #We follow the flow for a time Δt
         #This updates the reverse and forward rates, as well as the corresponding integrals
-        evaluate_flow!(pdmp, vertex, state, evo_data, nums, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
+        evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         time += segment.time
 
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
@@ -85,8 +86,9 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             
             rev_edge_number = reversed_edge_number(pdmp.graph, edge)
             
+            transition = pdmp.graph.transitions[edge.transition_number]
             #We adjust the state 
-            transition!(state, pdmp, evo_data, nums, edge)
+            transition!(state, pdmp, evo_data, nums, edge, transition)
             
         end
         #Debugging:

@@ -1,6 +1,6 @@
-function transition!(state::SplitState, pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters, edge::MethodEdge{GradientReflection})
+function transition!(state::SplitState, pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters, edge::MethodEdge, transition::GradientReflection)
     #We get the relevant data for a gradient reflection:
-    fetch_evo_data!(pdmp, evo_data, nums, state, edge.transition)
+    fetch_evo_data!(pdmp, evo_data, nums, state, transition)
 
     #We introduce a shorthand definition. 
     reflect!(state, pdmp, evo_data)
@@ -9,7 +9,7 @@ function transition!(state::SplitState, pdmp::PDMP, evo_data::EvolutionData, num
     nothing
 end
 
-function transition!(state::SplitState, pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters, edge::MethodEdge{Identity})
+function transition!(state::SplitState, pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters, edge::MethodEdge, transition::Identity)
     state.split_index.x = edge.target_vertex_number
     nothing
 end
