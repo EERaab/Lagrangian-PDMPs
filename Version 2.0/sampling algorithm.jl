@@ -151,5 +151,5 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
         k += 1
     end
 
-    return state_list, acceptances
+    return samples, acceptances
 end
