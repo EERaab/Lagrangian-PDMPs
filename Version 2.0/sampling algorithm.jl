@@ -120,7 +120,7 @@ end
 
 function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::Integer = 10, max_time::Float64 = 1.0, initial_state::Union{Nothing, SplitState} = nothing)
     k = 0
-    state_list = SplitState[]
+    samples = Vector{Float64}[]
     acceptances = Float64[]
     evo_data = initialize_evolution_data(pdmp)
 
@@ -128,12 +128,12 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
     if initial_state === nothing
         initial_state = initialize_state!(pdmp, evo_data, nums)
     end
-    push!(state_list, initial_state)
+    push!(samples, initial_state.position)
 
     # Main loop
     while k < max_point_attempts
         #We take the last state position and initialize a new state with a resampled velocity.
-        new_state = initialize_state!(pdmp, evo_data, nums, initial_position = copy.(state_list[end].position))
+        new_state = initialize_state!(pdmp, evo_data, nums, initial_position = copy.(samples[end]))
 
         acceptance = new_point!(pdmp, new_state, evo_data, nums, max_time)
         acceptance = min(1, acceptance)
@@ -141,10 +141,12 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
         push!(acceptances, acceptance)
 
         if rand() < acceptance
-            push!(state_list, new_state)
+            push!(samples, new_state.position)
+        else
+            push!(samples, copy.(samples[end])) #for the purposes of this algorithm the copy isn't necessary.
         end
 
-        #We only attempt to generate a fixed number of points - we do not ensure it
+        #We only attempt to generate a set number of points - we do not ensure it
         #This is to avoid infinite/long loops for very small acceptance rates.
         k += 1
     end
