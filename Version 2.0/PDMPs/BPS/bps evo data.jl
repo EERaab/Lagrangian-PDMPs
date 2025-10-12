@@ -1,6 +1,6 @@
-struct BPSEvoData<:EvolutionData 
+struct BPSEvoData{S}<:EvolutionData 
     gradient::Vector{Float64}
-    segments::Dict{Int64, Segment}
+    segments::Dict{Int64, S}
     #The fields below are 'trash' Used for avoiding allocs 
     fwd_position::Vector{Float64} #used in backkward integral approximations
     #adaptive methods
@@ -12,7 +12,7 @@ end
 
 function initialize_evolution_data(pdmp::PDMP{<:BPS_Method})
     grad = zeros(Float64, pdmp.target.dimension)
-    seg_dict = Dict(1=>Segment{1}())
+    seg_dict = Dict{Int64, Segment{1}}(1=>Segment{1}())
     fwd_position = zeros(Float64, pdmp.target.dimension)
     st = SplitState(zeros(Float64, pdmp.target.dimension),zeros(Float64, pdmp.target.dimension),Base.RefValue{Int64}(1))
     return BPSEvoData(grad, seg_dict, fwd_position, st, MVector{1,Float64}([0.0]), MVector{1,Float64}([0.0]), MVector{1,Float64}([0.0]))
