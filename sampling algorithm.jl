@@ -99,13 +99,17 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         if isnan(acceptance)
             println("NaN-acceptance")
             @show state
-            #@show seg_list
+            @show evo_data
+            @show max_time
+            @show time
             error("NaN-accept")
             #should reject the point
         elseif isinf(acceptance)
             println("Inf-acceptance")
             @show state
-            #@show seg_list
+            @show evo_data
+            @show max_time
+            @show time
             error("Inf-accept")
             #should accept the point if +inf, reject if -inf (though -Inf should be an error)
         end

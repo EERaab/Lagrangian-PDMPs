@@ -1,10 +1,8 @@
 using LinearAlgebra, StaticArrays, DiffResults, ForwardDiff, OrdinaryDiffEq, Distributions, TensorOperations, Plots, Random, FastLapackInterface
-#using BenchmarkTools
+#using BenchmarkTools, JET, Cthulhu
 
 include("pdmp definitions.jl")
-include("kernels and sampling.jl")
-include("algorithm.jl")
-include("Path segment evaluation methods/segment definitions.jl")
-include("PDMPs/Lagrangian-type PDMPs/lagrangian-type.jl")
+include("sampling algorithm.jl")
+include("transition functions.jl")
+include("Flow evaluation/Linear position methods/evaluation.jl")
 include("PDMPs/BPS/bps-type.jl")
-include("Visualization/plotting.jl")

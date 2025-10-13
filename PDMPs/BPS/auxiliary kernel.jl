@@ -3,7 +3,7 @@
 #end
 
 function sample_auxiliary!(pdmp::PDMP{<:BPS_Method}, position::Array{Float64,1}, evo_data::BPSEvoData, numerics::BPSNumerics)
-    return rand(pdmp.target.dimension)
+    return randn(pdmp.target.dimension)
 end
 
 function auxiliary_kernel!(pdmp::PDMP{<:BPS_Method}, state::SplitState, evo_data::BPSEvoData, numerics::BPSNumerics)

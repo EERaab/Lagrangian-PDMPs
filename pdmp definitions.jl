@@ -1,30 +1,67 @@
-#We seek to study probability densities - these are our targets.
-#We take their logarithm and dimension as our basic object to work with.
-struct TargetData{F} 
-    log_density::F
-    dimension::Integer
-end
-
-#A PDMP is a PDMP method and a target on which that method is applied. Together the two determine the PDMP fully.
-#Abstractly they tell us what the method does.
-abstract type PDMP_Method
-end
-
-#On occasion we shall want to reverse the PDMP, and this Z2 transf. can be included in the original PDMP.
-@kwdef struct PDMP{T<:PDMP_Method, F}
-    method::T
-    target::TargetData{F}
-    reversed::Bool = false
-end
-
-#PDMPs are defined by evolving according to some dynamic along a segment (or instantaneously at events). 
-#There are many possible dynamics, but each path segment (and every event) follows one or another.
+using StaticArrays
 abstract type DynType
 end
 
-#Depending on the dynamic we have different evaluations.
-@kwdef mutable struct PathSegmentValues{N, T<:DynType}
-    dyn::T
+#We define some dynamics
+    struct PositionVelocity<:DynType
+    end
+
+    struct VelocityODE<:DynType
+    end
+
+    struct VelocityPartial <:DynType
+        component::Int64
+    end
+
+
+#The structures above correspond to our different (analytical) flows. These are then handled differently depending on our choice of numerics.
+
+
+abstract type TransitionType
+end
+#We define some transition types: These encode the position, auxiliary transformations of the state
+#The transformation associated to the split index (i.e. the α → β) are encoded separately.
+#In theory these could contain some information, but in present implementations they could be replaced by strings, integers or whatever
+
+    struct GradientReflection<:TransitionType
+    end
+
+    struct Identity<:TransitionType
+    end
+
+#We define enlarged DiGraph structures
+#The vertices correspond to the α of the paper. As such each should contain a 'Segment' (since for each α we get a type of flow to evaluate), 
+#but there are some isomorphisms between flows, so we get a 'Segment' for each equivalence class ̄α. Therefore we have the vertices contain ̄α 
+#so as to indicate which class they belong to.
+
+    #The edges are our transitions between αs (which can act trivially α → α, as in BPS).
+    #They contain a transition function that tells us what the state transforms into.
+    #Edges pointing from the i:th vertex are in mth_dg.edges[i], 
+    #Here mth_dg.edges[i][j] corresponds to the j:th transition of the i:th vertex, 
+
+    struct MethodVertex
+        dynamic_number::Int64
+        segment_rate_number::Int64
+    end
+
+    #We take the edges to carry both the target and base vertex, i.e. each edge is a e = (α → β)
+    #and so we expect mth_dg.edges[i] = {e ∈ edge_set | e = i → β for some β}.
+
+    struct MethodEdge
+        base_vertex_number::Int64
+        target_vertex_number::Int64
+        transition_number::Int64
+    end
+    
+
+struct PDMP_DiGraph{D<:Tuple,T<:Tuple}
+    vertices::Vector{MethodVertex}
+    edges::Vector{Vector{MethodEdge}}
+    dynamics::D
+    transitions::T
+end
+
+@kwdef mutable struct Segment{N}
     time::Float64 = 0.0
     forward_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
     reverse_rates::MVector{N, Float64} = zeros(MVector{N, Float64})
@@ -32,56 +69,96 @@ end
     reverse_rate_integral::Float64 = 0.0
 end
 
-#We shall want to reuse our PathSegmentValues for repeated evolutions according to the same dynamics
-#Therefore we build a DiGraph to encode the possible transitions and states.
-struct MethodDiGraph{F}
-    vertices::Vector{PathSegmentValues}
-    edges::Vector{F}
+function reset_segment!(seg::Segment{N})::Segment{N} where N
+    seg.time = 0.0
+    @inbounds for i in eachindex(seg.forward_rates::MVector{N, Float64})
+        seg.forward_rates[i] = 0.0
+        seg.reverse_rates[i] = 0.0
+    end
+    seg.forward_rate_integral = 0.0
+    seg.reverse_rate_integral = 0.0
+    return seg
+end
+
+#We define targets:
+struct TargetData{F} 
+    log_density::F
+    dimension::Int64
+end
+
+#Together with a PDMP method the target defines a PDMP:
+abstract type PDMP_Method
+end
+
+#We can now define PDMPs.
+#We shall let the PDMP and its graph also represent the reversed PDMP, since we assume the two are closely related.
+#For example we know, that there exists a map 'reverse' on the edge set of the graph
+# that associates to each edge E another edge E' such that EE'(x) = x and E'E(y) = y. 
+@kwdef struct PDMP{M<:PDMP_Method, F, D<:Tuple,T<:Tuple}
+    method::M
+    target::TargetData{F}
+    graph::PDMP_DiGraph{D,T} = generate_pdmp_graph(method, target)
+end
+
+#Again, by assumption the reversed PDMP has the same transitions we can get the reverse edges.
+#Explicitly if e = α → β through transition T, then e_rev = β → α through T. 
+#Rather than returning e_rev (which would be necessary if e_rev had a different transition from e)
+#we return k s.t. graph.edges[e.target_vertex_number][k] = e_rev
+function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)::Int64
+    n = edge.target_vertex_number
+    k = 1
+    for alt_edge in graph.edges[n]
+        if alt_edge.target_vertex_number !== edge.base_vertex_number 
+            k+=1
+            continue
+        end
+        if alt_edge.transition_number !== edge.transition_number
+            k+=1
+            continue
+        end
+        return k #so that graph.edges[n][k] = alt_edge
+    end
+    #Unless we've made a mistake there will be some edge that is the reversed edge.
+    error("No reversed edge could be found.")
+    return false
 end
 
 
-
-
-
-#Each PDMP has a corresponding "reversed" PDMP. Sometimes it is useful to construct the reverse.
-function reverse(pdmp::PDMP)
-    return PDMP(pdmp.method, pdmp.target, !pdmp.reversed)
-end
-
-#Each PDMP method has its own numerical data structures related to how rates etc are computed.
-#These effectively define "how" we do computations.
-abstract type NumericalParameters{T<:PDMP_Method}
-end
-
-#Each PDMP also will compute some data that will be updated as we move along.
-abstract type EvolutionData{T<:PDMP_Method}
-end
-
-#For all PDMPS we consider we shall use binary states where we have a position and an auxiliary that is the velocity.
-#In principle the auxiliary could be the momentum or some such, hence the unfortunate naming convention.
+#The PDMPs will have states that transform as we go along.
 struct SplitState
-    position::Array{Float64,1}
-    auxiliary::Array{Float64,1}
+    position::Vector{Float64} #x
+    auxiliary::Vector{Float64} #v (or p)
+    split_index::Base.RefValue{Int64} #α - given as a ref so we can mutate the index value
 end
 
-#It is useful to be able to initialize a binary state for a PDMP.
-function initialize_binary_state!(pdmp::PDMP{T}, evo_data::EvolutionData, numerics::NumericalParameters; initial_position::Vector{Float64} = rand(pdmp.target.dimension)) where T<:PDMP_Method
-    return SplitState(initial_position, sample_auxiliary!(pdmp, initial_position, evo_data, numerics))
+#In a given PDMP there are going to be some numerics dictating how approximations are made
+abstract type NumericalParameters
 end
 
-#All PDMP methods will need to compute derivatives. How this is done can be define by some Differentiation Method
+#Given the numerics and the PDMP some specific set of data is used repeatedly in computations and
+#should be used for in-place computations.
+abstract type EvolutionData
+end
+
 abstract type DifferentiationMethod
 end
 
-#ForwardDer uses ForwardDiff
 struct ForwardDer<:DifferentiationMethod
 end
 
-#AnalyticalDer assumes the user provides the relevant derivative functions.
-#These are assumed to be in-place!
+#This part below needs reworking
 struct AnalyticalDer{F1,F2,F3,F4}<:DifferentiationMethod
     gradient!::F1
     hessian!::F2
     third_order_directional!::F3
     third_order_full!::F4
+end
+
+
+function initialize_state!(pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters; 
+    initial_position = rand(pdmp.target.dimension), 
+    initial_auxiliary = sample_auxiliary!(pdmp, initial_position, evo_data, nums),
+    initial_split_index = Base.RefValue{Int64}(1))
+    
+    return SplitState(initial_position, initial_auxiliary, initial_split_index)
 end

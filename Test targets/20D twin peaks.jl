@@ -11,7 +11,7 @@ end
 x_marginal_distr(x) = (normal(0.0, 1.0)(x)+normal(0.5, 1.0)(x))/2
 y_marginal_distr(y) = (normal(0.0, 1.0)(y)+normal(0.5, 1.0)(y))/2
 
-function grad_tp_20D!(grad::Vector{Float64}, X::Vector{Float64})
+function grad_tp_20D!(grad::Vector{Float64}, X::Vector{Float64})::Vector{Float64}
     shift = (0.5/(1+exp((-sum(X)/2)+2.5))) 
     @inbounds for i in eachindex(grad)
         grad[i] = -X[i] + shift

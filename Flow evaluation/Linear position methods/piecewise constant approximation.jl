@@ -1,5 +1,5 @@
 function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, max_time::Float64, 
-    evolution_data::EvolutionData, numerics::NumericalParameters, threshold::Float64, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false) where N
+    evolution_data::EvolutionData, numerics::NumericalParameters, threshold::Float64, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false)::Nothing where N
     vertex = pdmp.graph.vertices[state.split_index.x]
     dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
@@ -38,15 +38,20 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
 
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled by the condition in the while-loop
-        if position_method.step_size > Δt   
-            return segment
+        if position_method.step_size > Δt
+            if max_time > 0.0
+                segment.time = min(max_time, threshtime)
+            else
+                segment.time = threshtime
+            end
+            return nothing
         end
     end
-    return segment
+    return nothing
 end
 
 function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}, state::SplitState, 
-    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false) where N
+    evolution_data::EvolutionData, numerics::NumericalParameters, position_method::VTPiecewiseConstant; reversed_pdmp::Bool = false)::Nothing where N
     vertex = pdmp.graph.vertices[state.split_index.x]
     dyn = pdmp.graph.dynamics[vertex.dynamic_number]
     #segment = evo_data.segments[vertex.segment_rate_number]
@@ -69,9 +74,9 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled in the while-loop condition
         if position_method.step_size > Δt   
-            return segment
+            return nothing
         end
     end
-    return segment
+    return nothing
 end
 

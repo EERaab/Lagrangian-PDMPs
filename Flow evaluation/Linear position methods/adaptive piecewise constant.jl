@@ -74,7 +74,12 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled by the condition in the while-loop
-        if ϵ > Δt   
+        if ϵ > Δt
+            if max_time > 0.0
+                segment.time = min(max_time, threshtime)
+            else
+                segment.time = threshtime
+            end
             return nothing
         end
     end
