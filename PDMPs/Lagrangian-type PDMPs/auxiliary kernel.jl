@@ -11,7 +11,7 @@ function normal_distr!(vec::Vector{Float64}, Q::Matrix{Float64}, D::Diagonal{Flo
     @inbounds for i in eachindex(trash_vec)
         trash_vec[i] = randn()
     end
-    trash_vec .*= D.diag
+    trash_vec .*= sqrt.(D.diag)
     mul!(vec, Q, trash_vec)
     return vec
 end
@@ -45,7 +45,9 @@ function auxiliary_kernel!(pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, e
     fetch_spectral_data!(evo_data.spectral_data, hessian, pdmp.method.hardness)
 
     Dinv = evo_data.spectral_data.Dinv
-    L = evo_data.spectral_data.Q'*state.auxiliary
+    
+    mul!(evo_data.trash_vec, evo_data.spectral_data.Q', state.auxiliary)
+    #evo_data.trash_vec .= evo_data.spectral_data.Q'*state.auxiliary
 
     return exp(-dot(L, inv(Dinv), L)/2)/sqrt(abs(det(Dinv)))
     #L = evo_data.spectral_data.Q'*state.auxiliary
