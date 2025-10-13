@@ -17,7 +17,7 @@ function normal_distr!(vec::Vector{Float64}, Q::Matrix{Float64}, D::Diagonal{Flo
 end
 
 
-function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{<:Lagrangian_Method}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters)
+function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     #We determine the hessian
     fetch_hessian!(evo_data.point_data, pdmp.target.log_density, position, numerics.diff_method)
     
@@ -29,14 +29,14 @@ function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{<:Lagrangia
     return normal_distr!(vel, Q, Dinv, evo_data.trash_vec)
 end
 
-function sample_auxiliary!(pdmp::PDMP{<:Lagrangian_Method}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters)
+function sample_auxiliary!(pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     vel = similar(position)
     sample_auxiliary_in_place!(vel, pdmp, position, evo_data, numerics)
     return vel
 end
 
 
-function auxiliary_kernel!(pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, evo_data::LagrangianEvoData, numerics::NumericalParameters)
+function auxiliary_kernel!(pdmp::PDMP{M, F, D, T}, state::SplitState, evo_data::LagrangianEvoData, numerics::NumericalParameters)  where {M<:Lagrangian_Method, F, D, T}
     #We determine the hessian
     fetch_hessian!(evo_data.point_data, pdmp.target.log_density, state.position, numerics.diff_method)
     

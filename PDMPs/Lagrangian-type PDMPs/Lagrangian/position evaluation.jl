@@ -1,4 +1,5 @@
-function fetch_rates!(rates::MVector, pdmp::PDMP{Lagrangian}, state::SplitState, evolution_data::LagrangianEvoData{EvoTensorsLagrangian}, numerics::LagrangianNumerics, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
+function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Lagrangian, F, D, T}, state::SplitState, evolution_data::LagrangianEvoData, 
+    numerics::LagrangianNumerics, dyn::PositionVelocity; reverse::Bool = false, reversed_pdmp::Bool = false, adaptive_fwd::Bool = false) where {N, F, D, T}
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evolution_data.point_data, pdmp, state, numerics.diff_method, dyn)
     #The point data is processed through an eigendecomposition, which is used to define the spectral data (Q, QT, Dinv, J).
@@ -11,24 +12,21 @@ function fetch_rates!(rates::MVector, pdmp::PDMP{Lagrangian}, state::SplitState,
     k = rho_point_value(evolution_data, gr, state.auxiliary)
     
     #Finally we return the apropriate rate, depending on our pdmp and possible reversal.
-    if (pdmp.reversed && reverse)||(!pdmp.reversed && !reverse)
+    if (reversed_pdmp && reverse)||(!reversed_pdmp && !reverse)
         #We update the acutal rate.
-        rates[1] = max(0, k)
-        #If we use adaptive methods we will adapt not based on the rates but on the "signed" rates, which must be returned
-        if adaptive
-            return k
-        end
-        return rates
+        rates[1] = max(0.0, k)
+    else
+        rates[1] = max(0.0, -k)
     end
-    #If we use adaptive methods we will adapt not based on the rates but on the "signed" rates, which must be returned
-    rates[1] = max(0, -k)
-    if adaptive 
-        return -k
+    if adaptive_fwd
+        evolution_data.adaptive_data.fwd_rho[1] = k
+    else
+        evolution_data.adaptive_data.rho[1] = k
     end
-    return rates
+    nothing
 end
 
-function rho_point_value(evoldata::LagrangianEvoData{EvoTensorsLagrangian}, gr::Float64, v::Vector{Float64})::Float64
+function rho_point_value(evoldata::LagrangianEvoData, gr::Float64, v::Vector{Float64})::Float64
     specdata = evoldata.spectral_data
     pointdata = evoldata.point_data
     Q = specdata.Q
@@ -36,10 +34,22 @@ function rho_point_value(evoldata::LagrangianEvoData{EvoTensorsLagrangian}, gr::
     J = specdata.jmatrix
     Dinv=specdata.Dinv
 
-    P = QT*v
     dirhess = DiffResults.derivative(pointdata.position_update_data)
-    vM = J .* (QT*dirhess*Q)
-    term1 = dot(P,vM,P)/2.0
-    term2 = -tr(vM*Dinv)/2.0
+    trash1 = evo_data.trash_matrix1
+    trash2 = evo_data.trash_matrix2
+    mul!(trash1, dirhess, Q)
+    mul!(trash2, QT, trash1)
+    trash1 .= J .* trash2
+
+    P = evo_data.trash_vec
+    mul!(P, QT, v)
+    term1 = dot(P,trash1,P)/2.0
+    
+    #term2 = -tr(trash1*Dinv)/2.0
+    term2 = 0.0
+    @inbounds for i in eachindex(Dinv.diag)
+        term2 -= trash1[i,i] * Dinv.diag[i] 
+    end
+    term2 /= 2.0
     return term1+term2-gr
 end

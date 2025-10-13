@@ -1,21 +1,21 @@
-function evaluate_flow!(pdmp::PDMP, vertex::MethodVertex{VelocityODE}, state::SplitState, evo_data::EvolutionData, 
-    numerics::NumericalParameters; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) 
+function initialize_
+
+function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
+    numerics::NumericalParameters, dyn::VelocityODE; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
     #We pick a stopping threshold randomly.
     threshold = -log(rand())
-    
-    #We will manipulate the segment indicated by the vertex.
-    segment = evo_data.segments[vertex.segment_rate_number]
 
     #The "parameters" (param) that determine our equation of motion and rates.
-    #Typically this may be quite messy to determine, and may require some more general function, but for the two methods (Lagrangian, BPS-Lagrangian) we consider it is sufficient to have
     fetch_evo_data!(pdmp, evo_data, numerics, state, dyn_type)
     
     #The functions we integrate follow the ODE du = dynamical!(du, u,...)dt
     dynamics_function!(du::MVector, u::MVector, evot, t) = velocity_dynamics!(du, u, pdmp, evot, dyn_type);
     
     #We set up the initial condition.
-    #For BPS-Lagrangian and Lagrangian methods this is u0 = [[0.0, 0.0, 0.0]; state.auxiliary] but generally we may imagine a more advanced version.
-    #Until a more advanced version is constructed the code below is acceptable
+    #Here we assume that the fwd rate integral/rev rate integral and the volume change + velocity are all that we need to integrate.
+    #A more complicated PDMP could have a very different version of this.
+    u0 = evo_data.rate_velocity_volume_vector  
+    du = evo_Data.delta_rvv_vector
     u0 = MVector{3 + pdmp.target.dimension, Float64}([[0.0, 0.0, 0.0]; state.auxiliary])
     du = zeros(MVector{3 + pdmp.target.dimension, Float64})
 
@@ -25,7 +25,7 @@ function evaluate_flow!(pdmp::PDMP, vertex::MethodVertex{VelocityODE}, state::Sp
     dynamics_function!(du, u0, evo_data.evo_tensors, 0.0)    
     segment.reverse_rates[1] = du[2]
 
-    #We fix the ODE problem
+    #We fix the ODE problem, and somewhat arbritrarily cap T at 10000.0
     problem = ODEProblem(dynamics_function!, u0, 10000.0, evo_data.evo_tensors)        
     integrator = init(problem, numerics.auxiliary_method)
     condition(u, t, integrator) = (u[1] - threshold)  

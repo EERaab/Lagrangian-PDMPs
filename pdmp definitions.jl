@@ -140,6 +140,15 @@ end
 abstract type EvolutionData
 end
 
+#In adaptive step-size methods we use a set of temporary states to adjust step size
+@kwdef struct AdaptiveData{N}
+    adaptive_state::SplitState
+    adaptive_fwd_rates::MVector{N, Float64} = @MVector zeros(Float64, N)
+    rho::MVector{N, Float64} = @MVector zeros(Float64, N)
+    fwd_rho::MVector{N, Float64} = @MVector zeros(Float64, N)
+end
+
+
 abstract type DifferentiationMethod
 end
 

@@ -12,7 +12,7 @@ function initialize_evo_tensors(pdmp::PDMP{Lagrangian})
     return EvoTensorsLagrangian(zeros(Float64, dim, dim, dim), zeros(Float64, dim), zeros(Float64, dim, dim), zeros(Float64, dim), zeros(Float64, dim, dim, dim), zeros(Float64, dim, dim, dim))
 end
 
-function fetch_evo_tensors!(evolution_data::LagrangianEvoData, dyn::VelocityODE{Lagrangian})
+function fetch_evo_tensors!(method::Lagrangian, evolution_data::LagrangianEvoData, dyn::VelocityODE)
     specdata = evolution_data.spectral_data
     pointdata = evolution_data.point_data
     Q = specdata.Q
@@ -50,7 +50,7 @@ function fetch_evo_tensors!(evolution_data::LagrangianEvoData, dyn::VelocityODE{
 end
 
 #For ForwardDiff we use this function to fetch point data.
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::ForwardDer, dyn_type::VelocityODE{Lagrangian}) 
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{Lagrangian, F, D, T}, state::SplitState, diff_method::ForwardDer, dyn_type::VelocityODE) where {F,D,T}
     #We introduce a shorthand
     log_density = pdmp.target.log_density
     
@@ -67,7 +67,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method
 end
 
 #For analytically given derivatives we use this function to fetch point data.
-function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method}, state::SplitState, diff_method::AnalyticalDer, dyn_type::VelocityODE{Lagrangian}) 
+function fetch_point_data!(point_data::PointData, pdmp::PDMP{Lagrangian, F, D, T}, state::SplitState, diff_method::AnalyticalDer, dyn_type::VelocityODE) where {F, D, T}
     diff_method.gradient!(point_data.gradient, state.position)
 
     diff_method.hessian!(point_data.velocity_update_data.value, state.position)
@@ -77,7 +77,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{<:Lagrangian_Method
     nothing
 end
 
-function fetch_evo_data!(pdmp::PDMP{Lagrangian}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, dyn::VelocityODE{Lagrangian})
+function fetch_evo_data!(pdmp::PDMP{Lagrangian, F, D, T}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, dyn::VelocityODE) where {F, D, T}
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evo_data.point_data, pdmp, state, numerics.diff_method, dyn)
     
@@ -85,7 +85,7 @@ function fetch_evo_data!(pdmp::PDMP{Lagrangian}, evo_data::LagrangianEvoData, nu
     hessian = evo_data.point_data.velocity_update_data.value
     fetch_spectral_data!(evo_data.spectral_data, hessian, pdmp.method.hardness)
 
-    fetch_evo_tensors!(evo_data, dyn)
+    fetch_evo_tensors!(pdmp.method, evo_data, dyn)
     nothing
 end
 

@@ -1,5 +1,5 @@
 
-function velocity_dynamics!(du::Union{Vector{Float64}, T}, dyn_vector::Union{Vector{Float64}, T}, pdmp::PDMP{Lagrangian}, evo_tensors::EvoTensors, dyn_type::VelocityODE{Lagrangian}) where T<:MVector
+function velocity_dynamics!(du::Union{Vector{Float64}, X}, dyn_vector::Union{Vector{Float64}, X}, pdmp::PDMP{Lagrangian, F, D, T}, evo_tensors::EvoTensors, dyn_type::VelocityODE) where {X<:MVector, F, D, T}
     #Some useful naming conventiongs are used
     R0 = evo_tensors.R0
     R2 = evo_tensors.R2

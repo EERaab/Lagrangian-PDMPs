@@ -32,7 +32,7 @@ Returns the value of the derivative (∂f/∂λ) at (λ,a) for f(λ,a)=λcoth(λ
 """
 function jmatrixfunction2(λ::Float64,a::Float64)
     if iszero(λ)
-        return 0
+        return 0.0
     end
     return coth(λ*a)-a*λ*(csch(a*λ))^2
 end

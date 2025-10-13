@@ -8,5 +8,5 @@ include("auxiliary kernel.jl")
 
 #include("BPS-Lagrangian/bps-lagrangian structs.jl")
 include("Lagrangian/lagrangian structs.jl")
-include("Version 6.2/bps-lagrangian structs.jl")
+#include("Version 6.2/bps-lagrangian structs.jl")
 #include("Lagrangian Gradient Reflection/lagrangian gradient reflection structs.jl")
