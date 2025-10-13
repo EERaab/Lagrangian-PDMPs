@@ -31,9 +31,9 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         segment.time += Δt
         segment.forward_rate_integral += ΔI*Δt
         if reversed_pdmp
-            state.position .-= state.auxiliary*Δt
+            state.position .-= (state.auxiliary .* Δt)
         else
-            state.position .+= state.auxiliary*Δt
+            state.position .+= (state.auxiliary .* Δt)
         end
 
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
@@ -61,9 +61,9 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
         segment.time -= Δt
         segment.reverse_rate_integral += sum(segment.reverse_rates)*Δt
         if reversed_pdmp
-            state.position .+= state.auxiliary*Δt
+            state.position .+= (state.auxiliary .* Δt)
         else
-            state.position .-= state.auxiliary*Δt
+            state.position .-= (state.auxiliary .* Δt)
         end
         
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
