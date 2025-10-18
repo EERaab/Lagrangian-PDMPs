@@ -1,4 +1,16 @@
-function initialize_
+function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
+        numerics::NumericalParameters, dyn::VelocityODE; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
+        #We pick a stopping threshold randomly.
+        threshold = -log(rand())
+        
+        #The "parameters" (param) that determine our equation of motion and rates is partially encoded in evo_tensors.
+        fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
+        
+        reset_integrator!(evo_data, state, threshold)
+
+        s = solve!(evo_data.integrator)
+    end
+
 
 function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
     numerics::NumericalParameters, dyn::VelocityODE; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
@@ -6,10 +18,10 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
     threshold = -log(rand())
 
     #The "parameters" (param) that determine our equation of motion and rates.
-    fetch_evo_data!(pdmp, evo_data, numerics, state, dyn_type)
+    fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
     
     #The functions we integrate follow the ODE du = dynamical!(du, u,...)dt
-    dynamics_function!(du::MVector, u::MVector, evot, t) = velocity_dynamics!(du, u, pdmp, evot, dyn_type);
+    dynamics_function!(du::MVector, u::MVector, evot, t) = velocity_dynamics!(du, u, pdmp, evot, dyn);
     
     #We set up the initial condition.
     #Here we assume that the fwd rate integral/rev rate integral and the volume change + velocity are all that we need to integrate.

@@ -1,3 +1,4 @@
+
 #While the numerical parameters specify "how" we compute derivatives and etc, the specific values that we compute are stored in EvolutionData structures.
 #Because of the complexity in the Lagrangian methods we shall need several "sub-structures".
 
@@ -23,10 +24,8 @@
     abstract type EvoTensors 
     end
 
-
-
 #Finally we combine the above three objects into a single structure
-struct LagrangianEvoData{S, T<:EvoTensors, N, K}<:EvolutionData
+struct LagrangianEvoData{S, T<:EvoTensors, N, K, U}<:EvolutionData
     point_data::PointData
     spectral_data::SpectralData
     evo_tensors::T
@@ -36,16 +35,20 @@ struct LagrangianEvoData{S, T<:EvoTensors, N, K}<:EvolutionData
     trash_vec::Vector{Float64} #used to compute matrix products while avoiding allocations
     trash_matrix1::Array{Float64, 2}
     trash_matrix2::Array{Float64, 2}
+    #For use in the velocity ODE-method
+    long_trash_vector::Vector{Float64}
     #adaptive methods
     adaptive_data::AdaptiveData{N}
     #velocity methods
-    rate_velocity_volume_vector::MVector{K, Float64}
-    delta_rvv_vector::MVector{K, Float64}
+    velocity_ode_parameters::Tuple{MVector{3, Float64}, T}
+    velocity_u0::Vector{Float64}
+    integrator::U
 end
 
+include("integrator.jl")
 
 #Evo-data initialization has been moved into the PDMPs.
-function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method})
+function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method}, nums::NumericalParameters)
     dim = pdmp.target.dimension
     ini_pd = initialize_point_data(dim)
     ini_sd = initialize_spectral_data(dim)
@@ -56,17 +59,21 @@ function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method})
     trash_vec = zeros(Float64, dim)
     trash_mtr1 = zeros(Float64, dim, dim)
     trash_mtr2 = zeros(Float64, dim, dim)
+    #For use in the velocity ODE-method
+    long_trash_vector = zeros(Float64, dim + 2)
     #adaptive methods
     st = SplitState(zeros(Float64, dim), zeros(Float64, dim),Base.RefValue{Int64}(1))
     ada = AdaptiveData{dim}(adaptive_state = st)
     #velocity methods
-    rvv_vec = @MVector zeros(Float64, dim + 3)
-    Δrvv_vec = @MVector zeros(Float64, dim + 3)
-    return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, trash_mtr2, ada, rvv_vec, Δrvv_vec)
-end
+    velocity_ode_parameters = (MVector(0.0, 0.0, 0.0), ini_et)
+    velocity_u0 = zeros(Float64, pdmp.target.dimension + 2)
+    #vel_f = velocity_dynamics!
+    #jac_f = jacobian_dynamics!
+    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, long_trash_vector, trash_vec, velocity_u0, velocity_dynamics!, jacobian_dynamics!)
 
-#EVO tensors has been moved into the PDMPs.
-#include("evo tensors.jl") 
+    return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, 
+        trash_mtr2, long_trash_vector, ada, velocity_ode_parameters, velocity_u0, integrator)
+end
 
 include("point data.jl")
 include("spectral data.jl")

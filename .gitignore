@@ -1,1 +1,4 @@
 test.jl
+Diff eq test.jl
+test pdmp.jl
+test tensors.jl

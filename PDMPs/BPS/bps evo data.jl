@@ -7,7 +7,7 @@ struct BPSEvoData{S, N}<:EvolutionData
     adaptive_data::AdaptiveData{N}
 end
 
-function initialize_evolution_data(pdmp::PDMP{<:BPS_Method})
+function initialize_evolution_data(pdmp::PDMP{<:BPS_Method}, nums::NumericalParameters)
     grad = zeros(Float64, pdmp.target.dimension)
     seg_dict = Dict{Int64, Segment{1}}(1=>Segment{1}())
     fwd_position = zeros(Float64, pdmp.target.dimension)
