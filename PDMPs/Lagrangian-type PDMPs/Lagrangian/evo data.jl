@@ -34,7 +34,7 @@ function fetch_evo_data!(pdmp::PDMP{Lagrangian, F, D, T}, evo_data::LagrangianEv
     hessian = evo_data.point_data.velocity_update_data.value
     fetch_spectral_data!(evo_data.spectral_data, hessian, pdmp.method.hardness)
 
-    fetch_evo_tensors!(evo_data, dyn)
+    fetch_evo_tensors!(evo_data, pdmp.target.dimension)
     nothing
 end
 

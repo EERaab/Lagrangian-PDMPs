@@ -26,9 +26,9 @@ function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Lagrangian, F, D, T
     nothing
 end
 
-function rho_point_value(evoldata::LagrangianEvoData, gr::Float64, v::Vector{Float64})::Float64
-    specdata = evoldata.spectral_data
-    pointdata = evoldata.point_data
+function rho_point_value(evo_data::LagrangianEvoData, gr::Float64, v::Vector{Float64})::Float64
+    specdata = evo_data.spectral_data
+    pointdata = evo_data.point_data
     Q = specdata.Q
     QT = specdata.Q'
     J = specdata.jmatrix

@@ -45,7 +45,7 @@
         mul!(@view(du[3:end]), G_inv, trash_vector) 
 
         #Now we add v-quadratic parts of dv:
-        @inbounds for i in axes(Γ, 1)
+        for i in axes(Γ, 1)
             du[i+2] -= symmetric_double_dot(v, @view(Γ[i,:,:])) 
         end
         #At this point we have computed du[i] = dv^i/dt = Φ^i at v.
@@ -67,10 +67,10 @@
         Γ_trace = evo_tensors.Γ_trace
         Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
         G = evo_tensors.metric
-        G_inv = evo_tensors.inverse_metric
+        G_inv = evo_tensors.metric_inv
         ∇π = evo_tensors.gradient
 
-        long_dim = 2 + pdmp.target.dimension
+        dim = pdmp.target.dimension
 
         #J = ∂(ρ, dψ, dv^1, dv^2, …, dv^n)/∂u^j 
         #with u = (I, ψ, v^1, …, v^n).
@@ -78,9 +78,9 @@
 
         #Nothing depends on ρ or ψ.
         #This is goofy. DAE instead?
-        @inbounds for i ∈ axes(J, 1)
-            J[i, 1] .= 0.0
-            J[i, 2] .= 0.0
+        for i ∈ axes(J, 1)
+            J[i, 1] = 0.0
+            J[i, 2] = 0.0
         end
 
         #(dψ/dt)/dv = 2 ⋅ p_tr(Γ)
@@ -88,8 +88,8 @@
 
         #(dv/dt)/dv = -2 (Γv)
         v = @view(u[3:end])
-        for j ∈ 3:long_dim
-            @views mul!(J[j,3:end], -2.0 .* Γ[j, :, :], v)
+        for j ∈ 1:dim
+            @views mul!(J[j+2,3:end], (-2.0 .* Γ[j, :, :]), v)
         end
 
         #(dρ/dt)/dv = mess, see docs.
@@ -99,9 +99,9 @@
         Tmat = trash_matrix
         @views mul!(Tmat, J[3:end, 3:end]', G)
         mul!(trash_vector, Tmat, v)
-        @views J[1, :] .-= trash_vector
+        @views J[1, 3:end] .-= trash_vector
         mul!(trash_vector, Tmat', v)
-        @views J[1, :] .-= (trash_vector) ./ 2.0
+        @views J[1, 3:end] .-= (trash_vector) ./ 2.0
 
         if M == Lagrangian
             @views J[1, 3:end] .-= ∇π    

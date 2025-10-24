@@ -11,12 +11,12 @@ include("adjusted reinit.jl")
         data_vec[2] = data_vec[3] = 0.0
 
         #Our new initial rate/velocity is ∼[0,0, state.velocity]
-        u0 = evo_data.velocity_ode_parameters
+        u0 = evo_data.velocity_u0
         u0[1] = 0.0 #Corresponds to ∫ρ dt
         u0[2] = 0.0 #Our ψ = ∫ div(Φ_v)dt = ∫ tr(Γ) ⋅ vdt
         @view(u0[3:end]) .= state.auxiliary #the velocity.
 
-        adjusted_reinit!(integrator, u0_new, run_adjusted = true)
+        adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = true)
         nothing
     end
 
@@ -47,13 +47,13 @@ include("adjusted reinit.jl")
 
         #We cross when du[1] = 0.0
         #This can be directly implemented as M or taken as M = integrator.f.f(u)[1] 
-        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, t, integrator.p))[1] #du[1] = velocity_dynamics!(...)[1]
+        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, integrator.p, t))[1] #du[1] = velocity_dynamics!(...)[1]
 
         crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true))
         total_cb = CallbackSet(termination_cb, crossing_cb)
 
         dynamics_function!(du, u, p, t) = velocity_dynamics!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
-        jacobian_function!(J, u , p, t) = jacobian_dynamics!(du, u, p, pdmp, trash_vector, trash_matrix)#jacobian_dynamics!(J, u, p, pdmp)
+        jacobian_function!(J, u , p, t) = jacobian_dynamics!(J, u, p, pdmp, trash_matrix, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)
 
         ff = ODEFunction(dynamics_function!; jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)

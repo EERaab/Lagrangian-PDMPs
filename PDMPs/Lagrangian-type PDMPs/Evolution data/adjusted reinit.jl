@@ -45,7 +45,7 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
     if run_adjusted
         integrator.u .= u0
         integrator.uprev = integrator.u
-        if OrdinaryDiffEq.alg_extrapolates(integrator.alg)
+        if OrdinaryDiffEqCore.alg_extrapolates(integrator.alg)
             integrator.uprev2 .= integrator.uprev
         end
     else
@@ -57,7 +57,7 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
             integrator.uprev = integrator.u
         end
 
-        if OrdinaryDiffEq.alg_extrapolates(integrator.alg)
+        if OrdinaryDiffEqCore.alg_extrapolates(integrator.alg)
             if isinplace(integrator.sol.prob)
                 recursivecopy!(integrator.uprev2, integrator.uprev)
             else
@@ -114,7 +114,7 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
         if integrator.sol.u_analytic !== nothing
             resize!(integrator.sol.u_analytic, 0)
         end
-        if integrator.alg isa OrdinaryDiffEq.OrdinaryDiffEqCompositeAlgorithm
+        if integrator.alg isa OrdinaryDiffEqCore.OrdinaryDiffEqCompositeAlgorithm
             resize!(integrator.sol.alg_choice, resize_start)
         end
         integrator.saveiter = resize_start
@@ -144,11 +144,11 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
     end
 
     if reinit_callbacks
-        OrdinaryDiffEq.initialize_callbacks!(integrator, initialize_save)
+        OrdinaryDiffEqCore.initialize_callbacks!(integrator, initialize_save)
     end
 
     if reinit_cache
-        initialize!(integrator, integrator.cache)
+        OrdinaryDiffEqCore.initialize!(integrator, integrator.cache)
     end
 
     if reinit_retcode

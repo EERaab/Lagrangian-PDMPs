@@ -33,7 +33,7 @@ function diagonal_inv!(D::Diagonal)
     return D
 end
 
-function simplified_trace(D::Diagonal, M::Matrix)
+function simplified_trace(D::Diagonal, M)
     S = 0.0
     @inbounds for i in eachindex(D.diag)
         S += D.diag[i] * M[i,i]
@@ -54,9 +54,9 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     Γ_trace = evo_tensors.Γ_trace
     Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
     G = evo_tensors.metric
-    G_inv = evo_tensors.inverse_metric
+    G_inv = evo_tensors.metric_inv
     #This is goofy but we do not want to feed the full evo_data into dynamics so we save the gradient in two places.
-    evo_tensors.gradient = pointdata.gradient 
+    evo_tensors.gradient .= pointdata.gradient 
 
     jachess_tens = pointdata.velocity_update_data.derivs[1] #i.e. ∂_i ∂_j ∂_k log π 
 
@@ -107,7 +107,7 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
         @views mul!(trash_matrix2, L[:,:,k], QT)
         @views mul!(Term1[:,:,k], trash_matrix1, trash_matrix2)
         @views mul!(S[:,:,k], Q, trash_matrix2)
-        @views Γ_trace[k] .= simplified_trace(D, L[:,:,k]) #this admits a simpler form.
+        @views Γ_trace[k] = simplified_trace(Dinv, L[:,:,k]) #this admits a simpler form.
     end
 
     #Term2[i,j,k] ∼ G^{il}S_{jk,l}
@@ -128,7 +128,7 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     #Notably this maps Dinv ↦ D so Dinv no longer stores Dinv actually.
     D = diagonal_inv!(Dinv) 
     mul!(trash_matrix1, D, QT)
-    mul!(G.data, trash_matrix1)
+    mul!(G.data, Q, trash_matrix1)
     #If we wanted to we could restore Dinv:
     #diagonal_inv!(Dinv)
     return evo_tensors
