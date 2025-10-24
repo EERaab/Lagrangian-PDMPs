@@ -120,7 +120,6 @@ function reversed_edge_number(graph::PDMP_DiGraph, edge::MethodEdge)::Int64
     end
     #Unless we've made a mistake there will be some edge that is the reversed edge.
     error("No reversed edge could be found.")
-    return false
 end
 
 

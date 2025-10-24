@@ -38,7 +38,7 @@ include("adjusted reinit.jl")
         nothing
     end
 
-    function initialize_integrator(pdmp::PDMP, param, nums::NumericalParameters, long_trash_vector, trash_vector, u0, vel_f, jac_f)
+    function initialize_integrator(pdmp::PDMP, param, nums::NumericalParameters, long_trash_vector, trash_vector, trash_matrix, u0)
         #We terminate when the (positive part of the) du[1] integral exceeds some certain value
         threshold_condition(u, t, integrator) = integrator.p[1][1] - u[1]
         threshold_affect!(integrator) = terminate!(integrator)
@@ -52,8 +52,8 @@ include("adjusted reinit.jl")
         crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true))
         total_cb = CallbackSet(termination_cb, crossing_cb)
 
-        dynamics_function!(du, u, p, t) = vel_f(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
-        jacobian_function!(J, u , p, t) = jac_f(du, u, p, pdmp, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)
+        dynamics_function!(du, u, p, t) = velocity_dynamics!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
+        jacobian_function!(J, u , p, t) = jacobian_dynamics!(du, u, p, pdmp, trash_vector, trash_matrix)#jacobian_dynamics!(J, u, p, pdmp)
 
         ff = ODEFunction(dynamics_function!; jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)

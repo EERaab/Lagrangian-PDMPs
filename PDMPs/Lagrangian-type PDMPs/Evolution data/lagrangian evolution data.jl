@@ -55,8 +55,8 @@ function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method}, nums::Numeri
     ini_et = initialize_evo_tensors(pdmp)
     segments = Dict{Int64, Union{Segment{1}, Segment{2}}}(1 => Segment{1}(), 2=>Segment{2}())
     #Avoiding allocations:
-    fwd_position = zeros(Float64, dim)
-    trash_vec = zeros(Float64, dim)
+    fwd_position = zeros(Float64, dim) #used to store forward position when computing reversal in position
+    trash_vec = zeros(Float64, dim) 
     trash_mtr1 = zeros(Float64, dim, dim)
     trash_mtr2 = zeros(Float64, dim, dim)
     #For use in the velocity ODE-method
@@ -67,9 +67,7 @@ function initialize_evolution_data(pdmp::PDMP{<:Lagrangian_Method}, nums::Numeri
     #velocity methods
     velocity_ode_parameters = (MVector(0.0, 0.0, 0.0), ini_et)
     velocity_u0 = zeros(Float64, pdmp.target.dimension + 2)
-    #vel_f = velocity_dynamics!
-    #jac_f = jacobian_dynamics!
-    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, long_trash_vector, trash_vec, velocity_u0, velocity_dynamics!, jacobian_dynamics!)
+    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, long_trash_vector, trash_vec, trash_mtr1, velocity_u0)
 
     return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, 
         trash_mtr2, long_trash_vector, ada, velocity_ode_parameters, velocity_u0, integrator)

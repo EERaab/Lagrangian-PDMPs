@@ -4,9 +4,8 @@
 #
 #Functions exactly like 'reinit!' of OrdinaryDiffEq fame, except inside indicated blocks.
 
-using OrdinaryDiffEq, Accessors, RecursiveArrayTools
 
-function adjusted_reinit!(integrator::OrdinaryDiffEq.ODEIntegrator, u0 = integrator.sol.prob.u0;
+function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = integrator.sol.prob.u0;
         t0 = integrator.sol.prob.tspan[1],
         tf = integrator.sol.prob.tspan[2],
         erase_sol = true,

@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays, DiffResults, ForwardDiff, OrdinaryDiffEq, Distributions, TensorOperations, Plots, Random, FastLapackInterface
+using LinearAlgebra, StaticArrays, DiffResults, ForwardDiff, OrdinaryDiffEq, Distributions, Plots, Random, FastLapackInterface, Accessors, RecursiveArrayTools, OrdinaryDiffEqCore
 #using BenchmarkTools, JET, Cthulhu
 
 include("pdmp definitions.jl")
