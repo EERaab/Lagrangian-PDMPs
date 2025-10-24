@@ -70,16 +70,15 @@
         G_inv = evo_tensors.inverse_metric
         ∇π = evo_tensors.gradient
 
-        dim = pdmp.target.dimension
-        long_dim = dim+2
-        
+        long_dim = 2 + pdmp.target.dimension
+
         #J = ∂(ρ, dψ, dv^1, dv^2, …, dv^n)/∂u^j 
         #with u = (I, ψ, v^1, …, v^n).
 
 
         #Nothing depends on ρ or ψ.
         #This is goofy. DAE instead?
-        @inbounds for i ∈ 1:long_dim
+        @inbounds for i ∈ axes(J, 1)
             J[i, 1] .= 0.0
             J[i, 2] .= 0.0
         end

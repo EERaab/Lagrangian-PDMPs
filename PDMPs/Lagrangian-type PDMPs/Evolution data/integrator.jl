@@ -47,7 +47,7 @@ include("adjusted reinit.jl")
 
         #We cross when du[1] = 0.0
         #This can be directly implemented as M or taken as M = integrator.f.f(u)[1] 
-        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, t, integrator.p))[1] #du[1]
+        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, t, integrator.p))[1] #du[1] = velocity_dynamics!(...)[1]
 
         crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true))
         total_cb = CallbackSet(termination_cb, crossing_cb)
