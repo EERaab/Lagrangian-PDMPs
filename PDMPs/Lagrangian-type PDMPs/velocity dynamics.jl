@@ -15,7 +15,7 @@
         return value
     end
 
-    function velocity_dynamics!(du, u, p, pdmp::PDMP{M, F, D,T}, trash_vector) where {M, F, D, T}
+    function velocity_dynamics!(du, u, p, pdmp::PDMP{M, F, D,T}, trash_vector) where {M<:Lagrangian_Method, F, D, T}
         evo_tensors = p[2]
 
         #Some shorthands are convenient.
@@ -58,5 +58,56 @@
         return du
     end
 
+
+#JACOBIAN DYNAMICS
+    function jacobian_dynamics!(J, u, p, pdmp::PDMP{M, F, D,T}, trash_matrix, trash_vector) where {M<:Lagrangian_Method, F, D, T}
+        evo_tensors = p[2]
+
+        #Some shorthands are convenient.
+        Γ_trace = evo_tensors.Γ_trace
+        Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
+        G = evo_tensors.metric
+        G_inv = evo_tensors.inverse_metric
+        ∇π = evo_tensors.gradient
+
+        dim = pdmp.target.dimension
+        long_dim = dim+2
+        
+        #J = ∂(ρ, dψ, dv^1, dv^2, …, dv^n)/∂u^j 
+        #with u = (I, ψ, v^1, …, v^n).
+
+
+        #Nothing depends on ρ or ψ.
+        #This is goofy. DAE instead?
+        @inbounds for i ∈ 1:long_dim
+            J[i, 1] .= 0.0
+            J[i, 2] .= 0.0
+        end
+
+        #(dψ/dt)/dv = 2 ⋅ p_tr(Γ)
+        @views J[2, 3:end] .= 2.0 .* Γ_trace
+
+        #(dv/dt)/dv = -2 (Γv)
+        v = @view(u[3:end])
+        for j ∈ 3:long_dim
+            @views mul!(J[j,3:end], -2.0 .* Γ[j, :, :], v)
+        end
+
+        #(dρ/dt)/dv = mess, see docs.
+        @views J[1, 3:end] .= 3. .* Γ_trace
+
+        #...but a term like J^i_jG_{il} appears
+        Tmat = trash_matrix
+        @views mul!(Tmat, J[3:end, 3:end]', G)
+        mul!(trash_vector, Tmat, v)
+        @views J[1, :] .-= trash_vector
+        mul!(trash_vector, Tmat', v)
+        @views J[1, :] .-= (trash_vector) ./ 2.0
+
+        if M == Lagrangian
+            @views J[1, 3:end] .-= ∇π    
+        end
+        return J
+    end
 
 #THE END
