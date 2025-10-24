@@ -22,18 +22,18 @@
         Γ_trace = evo_tensors.Γ_trace
         Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
         G = evo_tensors.metric
-        G_inv = evo_tensors.inverse_metric
+        G_inv = evo_tensors.metric_inv
         ∇π = evo_tensors.gradient
 
         #u = (ρ, ψ, v^1, v^2, …, v^n) and du[1] can be found explicitly from du[2:end]
         v = @view(u[3:end])
 
-        du[2] = 2*dot(v, Γ_trace) #dψ/dt
+        du[2] = 2.0 * dot(v, Γ_trace) #dψ/dt
         
         #The velocity vector (v= du[3:end]) satisfies dv = -Γ^i_{jk}v^jv^k-G^{ij}ϕ_{,j} dt
         #For the SL-BPS method ϕ = -log π + (log det G )/2 where the latter has derivative tr(G^{-1}v(G))/2 = Γ^i_{ij}
         #For CA-BPS ϕ = (log det G )/2
-        #Thus ϕ_{,i} = Γ_trace_i - β ∂_i log π 
+        #Thus ϕ_{,i} = Γ_trace_i - β ∂_i log π with β = 0 or 1
         #Hence dv^i = -Γ^i_{jk}v^jv^k + G^{ij} (log π_{,j} - Γ^k_{kj}) dt
         if M == Lagrangian
             trash_vector .= Γ_trace .- ∇π #(log π_{,j} - Γ^k_{kj})
