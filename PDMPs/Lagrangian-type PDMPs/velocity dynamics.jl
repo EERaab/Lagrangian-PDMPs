@@ -50,7 +50,7 @@
             du[i+2] -= symmetric_double_dot(v, @view(Γ[i,:,:])) 
         end
 
-        #We begin to compute ρ = dψ/dt - dv^i/dt G_{ij}v^j
+        #We begin to compute ρ = dψ/dt + dv^i/dt G_{ij}v^j
         #First we construct G_{ij}v^j
         mul!(trash_vector, G, v)
 
@@ -98,19 +98,19 @@
         end
 
         #(dρ/dt)/dv = mess, see docs.
-        @views J[1, 3:end] .= 3. .* Γ_trace
+        @views J[1, 3:end] .= Γ_trace
+        if M == Lagrangian
+            @views J[1, 3:end] .+= ∇π    
+        end
 
         #...but a term like J^i_jG_{il} appears
         Tmat = trash_matrix
         @views mul!(Tmat, J[3:end, 3:end]', G)
         mul!(trash_vector, Tmat, v)
-        @views J[1, 3:end] .-= trash_vector
+        @views J[1, 3:end] .+= trash_vector
         mul!(trash_vector, Tmat', v)
-        @views J[1, 3:end] .-= (trash_vector) ./ 2.0
+        @views J[1, 3:end] .+= (trash_vector) ./ 2.0
 
-        if M == Lagrangian
-            @views J[1, 3:end] .-= ∇π    
-        end
         if reversed_pdmp
             J .*= (-1)
         end

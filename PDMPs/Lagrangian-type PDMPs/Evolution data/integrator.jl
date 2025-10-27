@@ -6,7 +6,7 @@ include("adjusted reinit.jl")
         integrator = evo_data.integrator
         #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor, reversed_pdmp)
         #We must reset the first element, an MVector of length 3.
-        data_vec = integrator.p[1]
+        data_vec = integrator.p[1] # = (threshold, ∫ρ^+dt, ∫ρ^-dt)
         data_vec[1] = stoch_threhold
         data_vec[2] = data_vec[3] = 0.0
 
@@ -16,7 +16,7 @@ include("adjusted reinit.jl")
         u0[2] = 0.0 #Our ψ = ∫ div(Φ_v)dt = ∫ tr(Γ) ⋅ vdt
         @view(u0[3:end]) .= state.auxiliary #the velocity.
 
-        adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = true)
+        adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = false)#true)
         
         integrator.p[3].x = reversed_pdmp
         nothing
@@ -57,10 +57,10 @@ include("adjusted reinit.jl")
         dynamics_function!(du, u, p, t) = velocity_dynamics!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
         jacobian_function!(J, u , p, t) = jacobian_dynamics!(J, u, p, pdmp, trash_matrix, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)
 
-        ff = ODEFunction(dynamics_function!; jac = jacobian_function!)
+        ff = ODEFunction(dynamics_function!, jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)
         solver = nums.auxiliary_method #AutoTsit5(Rosenbrock23())
-        integrator = init(problem, solver, callback = total_cb, save_everystep=false)
+        integrator = init(problem, solver, callback = total_cb, save_everystep=true)
         return integrator
     end
 
