@@ -58,70 +58,62 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     #This is goofy but we do not want to feed the full evo_data into dynamics so we save the gradient in two places.
     evo_tensors.gradient .= pointdata.gradient 
 
-    jachess_tens = pointdata.velocity_update_data.derivs[1] #i.e. ∂_i ∂_j ∂_k log π 
+    #JH_{ijk} =∂_i ∂_j ∂_k log π i.e. jachess_tens[i,j,k]. Totally symmetric.
+    jachess_tens = pointdata.velocity_update_data.derivs[1] 
 
     trash_matrix1 = evolution_data.trash_matrix1
-    trash_matrix2 = evolution_data.trash_matrix2
-    #The object M[i,j,k] ∼ (M_k)_{ij} = (Q^T (∂_k H) Q)_{ij} needs to be computed to determine derivatives.
-    M = evo_tensors.trash_r3_tensor1 #evo_tensors.M
-    @inbounds for k in 1:dim
+    trash_matrix2 = evolution_data.trash_matrix2    
+
+    #(M_k)_{ij} = (Q^T*H_k*Q)_{ij} i.e. M[i,j,k] = (QT * H[:,:,k]*Q)[i,j]
+    M = evo_tensors.trash_r3_tensor1 
+
+
+
+    for k in 1:dim
         @views mul!(trash_matrix1, jachess_tens[:,:,k], Q)
         @views mul!(M[:,:,k], QT, trash_matrix1)
     end
-
-    #The object L[i,j,k] ∼ L_{ijk} = (J ∘ M_k)_{ij} is used in almost every calculation below
+    #(L_k)_{ij} = (J ∘ M_k)_{ij} i.e. L[i,j,k] = J[i,j]*M[i,j,k] = (Julia broadcasting quirk) = (J .* M)[i,j,k]
     L = evo_tensors.trash_r3_tensor2
-    #By a quirk of broadcasting in Julia we get L[i,j,k] ∼ L_{ijk} = (J ∘ M_k)_{ij} ∼ J .* M 
     L .= J .* M
 
-
-    #If we were only interested in the dynamics it would not be necessary to compute Γ fully,
-    #we could instead for symmetry by contraction! Alas, we shall compute Γ fully here. 
-    #This will amount to a use using and extra symmetrization.
-    #To clarify:
-    #Γ^i_{jk} = G^{il}((G_{lj,k}+G_{lk,j})-G_{jk,l})/2
-    #so letting
-    #Term1[i,j,k] ∼ Term1_{ijk} = G^{il}G_{lj,k}
-    #Term2[i,j,k] ∼ Term2_{ijk} = G^{il}G_{jk,l}
+    #Γ^i_{jk}= (1/2)*G^{il}(G_{lj,k}+G_{lk,j}-G_{jk,l})
+    #With
+    #T1^i_{jk} = G^{il}G_{lj,k} i.e. T1[i,j,k] = ((Q*≀D≀^{-1}*QT)(Q*L[:,:, k]*QT))[i,j] = (Q*≀D≀^{-1}*L[:,:,k]*QT)[i,j]
+    #and
+    #T2^i_{jk} = G^{il}G_{jk,l} i.e. T2[i,j,k] = ∑_L  (Q*≀D≀^{-1}*QT)[i,l] (Q L[:,:,l] QT)[j,k]
     #we have
-    #Γ^{i}_{jk} ∼ (Term1{ijk} + Term1{ikj} - Term2_{ijk})/2
+    #Γ[i,j,k] = (1/2)(T1[i,:,:]+T1[1,:,:]' - T2[i,:,:])[j,k]
 
-    #The first term admits a computational simplification for the soft-abs metric.
-    #Term1[i,j,k] ∼ G^{il}G_{lj,k} = (Q≀D≀^{-1} (J\circ M_k) Q^T)_{ij} =(Q ≀D≀^{-1} L_k Q^T)_{ij} ∼ 
-    #∼(Q*≀D≀^{-1}*L[:,:,k]*Q^T)[i,j]
-
-    #We can get the metric inverse while were computing Term1
+    #Let TrashM1 = (Q*≀D≀^{-1})
+    #Then G_inv = trash_matrix1*QT
     mul!(trash_matrix1, Q, Dinv)
     mul!(G_inv.data, trash_matrix1, QT)
 
-    #Term1[i,j,k] ∼ (Q*≀D≀^{-1}*L[:,:,k]*Q^T)[i,j]
+    #Let S[i,j,k] = (Q*L[:,:,k]*QT)[i,j] so that T2[i,j,k] = ((Q*≀D≀^{-1}*QT)*S[j,k,:])[i]
+    #also
+    #T2[:, j, k] = ((Q*≀D≀^{-1}*QT)*S[j,k,:])
 
-    #Term2[i,j,k] = ∑_l G_inv[i,l](Q * L[:,:,l]* QT)[j,k]
-    #For convenience we store S[:,:,l] = (Q * L[:,:,l]* QT) = (∂_l G)[:,:]
-    #Thus Term2[i,j,k] = ∑_l S[i,j,l]*G_inv[l,k] (and S is symmetric in i,j).
     S = evo_tensors.trash_r3_tensor1
-    #partial_trace_vec = evo_tensors.trash_vector #components 
-    #S is of course just the same as M at this point, but M is no longer needed.
-    Term1 = evo_tensors.Term1
-    @inbounds for k in 1:dim
+    T1 = evo_tensors.Term1
+    for k in 1:dim
         @views mul!(trash_matrix2, L[:,:,k], QT)
-        @views mul!(Term1[:,:,k], trash_matrix1, trash_matrix2)
+        @views mul!(T1[:,:,k], trash_matrix1, trash_matrix2)
         @views mul!(S[:,:,k], Q, trash_matrix2)
-        @views Γ_trace[k] = simplified_trace(Dinv, L[:,:,k]) #this admits a simpler form.
+        @views Γ_trace[k] = simplified_trace(Dinv, L[:,:,k])/2.0 #this admits a simpler form.
     end
 
-    #Term2[i,j,k] ∼ G^{il}S_{jk,l}
-    Term2 = evo_tensors.Term2
-    @inbounds for i in 1:dim
-        @views mul!(Term2[:,i,i], G_inv, S[i,i,:])
-        for j in i+1:dim
-            @views mul!(Term2[:,i,j], G_inv, S[i,j,:])
-            @views Term2[:,j,i] .= Term2[:,i,j]
+    T2 = evo_tensors.Term2
+    for j in 1:dim
+        @views mul!(T2[:,j,j], G_inv, S[j,j,:])
+        for k in j+1:dim
+            @views mul!(T2[:,j,k], G_inv, S[j,k,:])
+            @views T2[:,k,j] .= T2[:,j,k]
         end        
     end
 
-    @inbounds for i in 1:dim
-        @views Γ[i,:,:] .= (Term1[i,:,:] .+ (Term1[i,:,:]') .- Term2[i,:,:])./2.0
+    for i in 1:dim
+        @views Γ[i,:,:] .= (T1[i,:,:] .+ (T1[i,:,:]') .- T2[i,:,:])./2.0
     end
 
     #Now for the metric

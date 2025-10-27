@@ -12,7 +12,7 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         #The "parameters" (param) that determine our equation of motion and rates is partially encoded in evo_tensors.
         fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
         
-        reset_integrator!(evo_data, state, threshold)
+        reset_integrator!(evo_data, state, threshold, reversed_pdmp)
 
         #We explicitly assume that the events are of a single type here!
         #In a future implementation this could change.

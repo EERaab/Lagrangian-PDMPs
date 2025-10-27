@@ -2,9 +2,9 @@ include("adjusted reinit.jl")
 
 #### INTEGRATOR HANDLING ####
 
-    function reset_integrator!(evo_data, state, stoch_threhold)
+    function reset_integrator!(evo_data, state, stoch_threhold, reversed_pdmp)
         integrator = evo_data.integrator
-        #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor)
+        #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor, reversed_pdmp)
         #We must reset the first element, an MVector of length 3.
         data_vec = integrator.p[1]
         data_vec[1] = stoch_threhold
@@ -17,6 +17,8 @@ include("adjusted reinit.jl")
         @view(u0[3:end]) .= state.auxiliary #the velocity.
 
         adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = true)
+        
+        integrator.p[3].x = reversed_pdmp
         nothing
     end
 

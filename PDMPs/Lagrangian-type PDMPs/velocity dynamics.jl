@@ -17,6 +17,7 @@
 
     function velocity_dynamics!(du, u, p, pdmp::PDMP{M, F, D,T}, trash_vector) where {M<:Lagrangian_Method, F, D, T}
         evo_tensors = p[2]
+        reversed_pdmp = p[3].x #p[3] is a ref to a bool.
 
         #Some shorthands are convenient.
         Γ_trace = evo_tensors.Γ_trace
@@ -48,13 +49,17 @@
         for i in axes(Γ, 1)
             du[i+2] -= symmetric_double_dot(v, @view(Γ[i,:,:])) 
         end
-        #At this point we have computed du[i] = dv^i/dt = Φ^i at v.
 
         #We begin to compute ρ = dψ/dt - dv^i/dt G_{ij}v^j
         #First we construct G_{ij}v^j
         mul!(trash_vector, G, v)
 
         du[1] = du[2] - dot(v, trash_vector)
+
+        #We adjust for PDMP-reversal:
+        if reversed_pdmp
+            du .*= (-1)
+        end
         return du
     end
 
@@ -62,7 +67,7 @@
 #JACOBIAN DYNAMICS
     function jacobian_dynamics!(J, u, p, pdmp::PDMP{M, F, D,T}, trash_matrix, trash_vector) where {M<:Lagrangian_Method, F, D, T}
         evo_tensors = p[2]
-
+        reversed_pdmp = p[3].x
         #Some shorthands are convenient.
         Γ_trace = evo_tensors.Γ_trace
         Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
@@ -105,6 +110,9 @@
 
         if M == Lagrangian
             @views J[1, 3:end] .-= ∇π    
+        end
+        if reversed_pdmp
+            J .*= (-1)
         end
         return J
     end
