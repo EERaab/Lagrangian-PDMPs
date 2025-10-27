@@ -2,7 +2,7 @@ include("adjusted reinit.jl")
 
 #### INTEGRATOR HANDLING ####
 
-    function reset_integrator!(evo_data, state, stoch_threhold, reversed_pdmp)
+    function reset_integrator!(evo_data, state, stoch_threhold, reversed_pdmp, adjusted)
         integrator = evo_data.integrator
         #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor, reversed_pdmp)
         #We must reset the first element, an MVector of length 3.
@@ -16,8 +16,10 @@ include("adjusted reinit.jl")
         u0[2] = 0.0 #Our ψ = ∫ div(Φ_v)dt = ∫ tr(Γ) ⋅ vdt
         @view(u0[3:end]) .= state.auxiliary #the velocity.
 
-        adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = false)#true)
-        
+        #This part is iffy. For some reason reinit! allocates, which we cannot abide.
+        #We try to fix this by defining our own reinit-method (see separate file), alas this seems to introduce bugs.
+        adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = adjusted)
+        #reinit!(integrator, evo_data.velocity_u0)
         integrator.p[3].x = reversed_pdmp
         nothing
     end

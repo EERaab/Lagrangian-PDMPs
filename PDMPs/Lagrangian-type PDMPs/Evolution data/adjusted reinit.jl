@@ -38,34 +38,21 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
         end
     end
 
-    ######################### THIS BLOCK OF CODE ALLOCATES#######################################
-    #Fix: Use integrator.u .= u0
-    #integrator.uprev .= integrator.u 
-    #integrator.uprev2 .= integrator.uprev
-    if run_adjusted
-        integrator.u .= u0
-        integrator.uprev = integrator.u
-        if OrdinaryDiffEqCore.alg_extrapolates(integrator.alg)
-            integrator.uprev2 .= integrator.uprev
-        end
+    if isinplace(integrator.sol.prob)
+        recursivecopy!(integrator.u, u0)
+        recursivecopy!(integrator.uprev, integrator.u)
     else
-        if isinplace(integrator.sol.prob)
-            recursivecopy!(integrator.u, u0)
-            recursivecopy!(integrator.uprev, integrator.u)
-        else
-            integrator.u = u0
-            integrator.uprev = integrator.u
-        end
+        integrator.u = u0
+        integrator.uprev = integrator.u
+    end
 
-        if OrdinaryDiffEqCore.alg_extrapolates(integrator.alg)
-            if isinplace(integrator.sol.prob)
-                recursivecopy!(integrator.uprev2, integrator.uprev)
-            else
-                integrator.uprev2 = integrator.uprev
-            end
+    if OrdinaryDiffEqCore.alg_extrapolates(integrator.alg)
+        if isinplace(integrator.sol.prob)
+            recursivecopy!(integrator.uprev2, integrator.uprev)
+        else
+            integrator.uprev2 = integrator.uprev
         end
     end
-    ######################### END OF ALLOCATING BLOCK #######################################
 
 
 
@@ -73,19 +60,25 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
     integrator.tprev = t0
 
 
+    tType = typeof(integrator.t)
     ######################### THIS BLOCK OF CODE ALLOCATES#######################################
     #Fix: ??? 
     #Have to deal with tstops, saveat and d_discontinuities.
     #Since saveat, d_discontinuities and tstops are all the same, we can keep them as
     #they are. Have to avoid adjustments though to avoid bugs here.
+
     if run_adjusted
-        nothing
+        #This should be used with care. We use a check here to ensure that we empty the t-stops if the state of the integrator is not as expectted.
+        while !isempty(integrator.opts.tstops)
+            #print("Non-empty t-stop heap.")
+            pop!(integrator.opts.tstops)
+        end
+        push!(integrator.opts.tstops, tType(tf))
     else
-        tType = typeof(integrator.t)
         tspan = (tType(t0), tType(tf))
-        integrator.opts.tstops = OrdinaryDiffEq.initialize_tstops(tType, tstops, d_discontinuities, tspan)
-        integrator.opts.saveat = OrdinaryDiffEq.initialize_saveat(tType, saveat, tspan)
-        integrator.opts.d_discontinuities = OrdinaryDiffEq.initialize_d_discontinuities(tType,
+        integrator.opts.tstops = OrdinaryDiffEqCore.initialize_tstops(tType, tstops, d_discontinuities, tspan)
+        integrator.opts.saveat = OrdinaryDiffEqCore.initialize_saveat(tType, saveat, tspan)
+        integrator.opts.d_discontinuities = OrdinaryDiffEqCore.initialize_d_discontinuities(tType,
             d_discontinuities,
             tspan)
     end

@@ -17,7 +17,7 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         #We explicitly assume that the events are of a single type here!
         #In a future implementation this could change.
         integrator = evo_data.integrator
-        segment.reverse_rates[1] = -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1]
+        segment.reverse_rates[1] = -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1] #assumes that the rate is indeed positive here.
         sol = solve!(integrator)
 
         @views state.auxiliary .= sol.u[end][3:end]
