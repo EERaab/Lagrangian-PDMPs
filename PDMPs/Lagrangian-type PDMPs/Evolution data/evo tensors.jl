@@ -122,6 +122,6 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     mul!(trash_matrix1, D, QT)
     mul!(G.data, Q, trash_matrix1)
     #If we wanted to we could restore Dinv:
-    #diagonal_inv!(Dinv)
+    diagonal_inv!(Dinv)
     return evo_tensors
 end

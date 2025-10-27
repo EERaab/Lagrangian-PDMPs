@@ -37,9 +37,9 @@
         #Thus ϕ_{,i} = Γ_trace_i - β ∂_i log π with β = 0 or 1
         #Hence dv^i = -Γ^i_{jk}v^jv^k + G^{ij} (log π_{,j} - Γ^k_{kj}) dt
         if M == Lagrangian
-            trash_vector .= Γ_trace .- ∇π #(log π_{,j} - Γ^k_{kj})
+            trash_vector .= ∇π .- Γ_trace #(log π_{,j} - Γ^k_{kj})
         elseif M == Version62
-            trash_vector .= Γ_trace
+            trash_vector .= -Γ_trace
         else
             error("Unimplemented!")
         end
@@ -54,7 +54,7 @@
         #First we construct G_{ij}v^j
         mul!(trash_vector, G, v)
 
-        du[1] = du[2] - dot(v, trash_vector)
+        @views du[1] = du[2] + dot(du[3:end], trash_vector)
 
         #We adjust for PDMP-reversal:
         if reversed_pdmp
