@@ -2,3 +2,5 @@ test.jl
 Diff eq test.jl
 test pdmp.jl
 test tensors.jl
+test pdmp.jl
+Reduced Twin peaks.jl
