@@ -2,7 +2,7 @@ include("adjusted reinit.jl")
 
 #### INTEGRATOR HANDLING ####
 
-    function reset_integrator!(evo_data, state, stoch_threhold, reversed_pdmp, adjusted)
+    function reset_integrator!(evo_data, state, stoch_threhold, reversed_pdmp; adjusted = true)
         integrator = evo_data.integrator
         #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor, reversed_pdmp)
         #We must reset the first element, an MVector of length 3.
