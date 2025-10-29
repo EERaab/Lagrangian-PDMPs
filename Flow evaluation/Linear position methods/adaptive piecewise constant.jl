@@ -75,9 +75,9 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         #Technically this should already be handled by the condition in the while-loop
         if ϵ > Δt
             if max_time > 0.0
-                segment.time = min(max_time, threshtime)
+                segment.time = min(max_time, segment.time + threshtime)
             else
-                segment.time = threshtime
+                segment.time += threshtime
             end
             return nothing
         end
@@ -96,7 +96,6 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
     fwd_state.auxiliary .= state.auxiliary
 
     fwd_rates = evolution_data.adaptive_data.adaptive_fwd_rates
-    
     while segment.time > 0
         #We want to determine the adaptive step based on ρ so we fetch ρ instead of the reverse rate λ.
         fetch_rates!(segment.reverse_rates, pdmp, state, evolution_data, numerics, dyn, reverse = true, reversed_pdmp = reversed_pdmp)

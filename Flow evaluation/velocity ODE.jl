@@ -24,7 +24,7 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         #    @show -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1]
         #end
         segment.forward_rates[1] = max(0.0, sol(sol.t[end], Val{1})[1])
-        segment.reverse_rates[1] = max(0.0, (integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1])
+        segment.reverse_rates[1] = max(0.0, -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1])
         #max(0.0, -sol(0.0, Val{1})[1]) 
         #Should be equal to -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1]
         

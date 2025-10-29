@@ -7,11 +7,6 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We update the forward rate.
         fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, dyn, reversed_pdmp = reversed_pdmp)
-        if any(isnan.(segment.forward_rates))
-            @show state
-            @show evolution_data
-            error("Nan rate")
-        end
 
         #If the forward integral is getting close to the threshold we terminate the evolution before reaching our current time t + ϵ where ϵ is the stepsize. 
         #We determine the appropriate step length Δt here.
@@ -26,7 +21,6 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         else
             Δt = min(threshtime, position_method.step_size) 
         end
-        
         #We update the forward rate integrals, time and state position.
         segment.time += Δt
         segment.forward_rate_integral += ΔI*Δt
@@ -40,9 +34,9 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         #Technically this should already be handled by the condition in the while-loop
         if position_method.step_size > Δt
             if max_time > 0.0
-                segment.time = min(max_time, threshtime)
+                segment.time = min(max_time, threshtime+segment.time)
             else
-                segment.time = threshtime
+                segment.time += threshtime
             end
             return nothing
         end
@@ -70,7 +64,6 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
         else
             state.position .-= (state.auxiliary .* Δt)
         end
-        
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled in the while-loop condition
         if position_method.step_size > Δt   
