@@ -10,13 +10,12 @@ function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Lagrangian, F, D, T
     gr = dot(evolution_data.point_data.gradient, state.auxiliary)
     #gr = evolution_data.point_data.gradient'*state.auxiliary
     ρ = rho_point_value(evolution_data, gr, state.auxiliary)
-    
     #Finally we return the apropriate rate, depending on our pdmp and possible reversal.
     if (reversed_pdmp && reverse)||(!reversed_pdmp && !reverse)
         #We update the acutal rate.
-        rates[1] = max(0.0, ρ)
-    else
         rates[1] = max(0.0, -ρ)
+    else
+        rates[1] = max(0.0, ρ)
     end
     if adaptive_fwd
         evolution_data.adaptive_data.fwd_rho[1] = ρ
