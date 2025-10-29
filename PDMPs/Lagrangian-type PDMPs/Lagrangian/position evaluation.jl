@@ -9,19 +9,19 @@ function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Lagrangian, F, D, T
     #We determine the value of rho which fully determines the rate.
     gr = dot(evolution_data.point_data.gradient, state.auxiliary)
     #gr = evolution_data.point_data.gradient'*state.auxiliary
-    k = rho_point_value(evolution_data, gr, state.auxiliary)
+    ρ = rho_point_value(evolution_data, gr, state.auxiliary)
     
     #Finally we return the apropriate rate, depending on our pdmp and possible reversal.
     if (reversed_pdmp && reverse)||(!reversed_pdmp && !reverse)
         #We update the acutal rate.
-        rates[1] = max(0.0, k)
+        rates[1] = max(0.0, ρ)
     else
-        rates[1] = max(0.0, -k)
+        rates[1] = max(0.0, -ρ)
     end
     if adaptive_fwd
-        evolution_data.adaptive_data.fwd_rho[1] = k
+        evolution_data.adaptive_data.fwd_rho[1] = ρ
     else
-        evolution_data.adaptive_data.rho[1] = k
+        evolution_data.adaptive_data.rho[1] = ρ
     end
     nothing
 end
@@ -32,24 +32,24 @@ function rho_point_value(evo_data::LagrangianEvoData, gr::Float64, v::Vector{Flo
     Q = specdata.Q
     QT = specdata.Q'
     J = specdata.jmatrix
-    Dinv=specdata.Dinv
+    Dinv = specdata.Dinv
 
     dirhess = DiffResults.derivative(pointdata.position_update_data)
     trash1 = evo_data.trash_matrix1
-    trash2 = evo_data.trash_matrix2
+    vM = evo_data.trash_matrix2 #vM = (QT*v(H)*Q) as for velocities - just with an extra v-contraction
     mul!(trash1, dirhess, Q)
-    mul!(trash2, QT, trash1)
-    trash1 .= J .* trash2
+    mul!(vM, QT, trash1)
+    vL = trash1
+    vL .= J .* vM #vL = J ∘ vM as for velocities
 
     P = evo_data.trash_vec
     mul!(P, QT, v)
-    term1 = dot(P,trash1,P)/2.0
+    term1 = -dot(P,vL,P)/2.0 #G_{ij,k}v^iv^jv^k 
     
-    #term2 = -tr(trash1*Dinv)/2.0
     term2 = 0.0
     @inbounds for i in eachindex(Dinv.diag)
-        term2 -= trash1[i,i] * Dinv.diag[i] 
+        term2 += vL[i,i] * Dinv.diag[i] 
     end
     term2 /= 2.0
-    return term1+term2-gr
+    return term1+term2+gr
 end

@@ -40,7 +40,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     #We decide whether to follow the PDMP or its reversal
     reversed_pdmp = rand(Bool)
-    
+    @show reversed_pdmp
     #We compute the initial state acceptance and the exponent term
     acceptance = 1.0/full_density_kernel!(pdmp, state, evo_data, nums)
     acceptance_exponent = 0.0
@@ -59,10 +59,12 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         
         #Debugging
         #push!(st_list, SplitState(copy.(state.position), copy.(state.auxiliary), 1))
-        
+        println("-----")
+        println("Running dynamic $dyn on state $state")
         #We follow the flow for a time Δt
         #This updates the reverse and forward rates, as well as the corresponding integrals
         evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
+        println("Segment result: $segment")
         time += segment.time
 
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
@@ -91,9 +93,8 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             transition!(state, pdmp, evo_data, nums, edge, transition)
             
         end
-        #Debugging:
-        #push!(seg_list, Segment(segment.time, segment.forward_rates, segment.reverse_rates, segment.forward_rate_integral, segment.reverse_rate_integral))
-        
+        println("With acceptance: $acceptance and exponent $acceptance_exponent")
+          
         #If the acceptance is Infinite or NaN we should not keep going
         #This happens when either 1) fwd acceptance/rate is zero
         if isnan(acceptance)
@@ -112,7 +113,9 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             @show time
             error("Inf-accept")
             #should accept the point if +inf, reject if -inf (though -Inf should be an error)
-        end
+        elseif iszero(acceptance)
+            return acceptance
+        end        
     end
 
     #In the final state we include the density of the final state in our acceptance, as well as the exponential factor
@@ -126,7 +129,7 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
     k = 0
     samples = Vector{Float64}[]
     acceptances = Float64[]
-    evo_data = initialize_evolution_data(pdmp)
+    evo_data = initialize_evolution_data(pdmp, nums)
 
     # Handle initial state
     if initial_state === nothing
