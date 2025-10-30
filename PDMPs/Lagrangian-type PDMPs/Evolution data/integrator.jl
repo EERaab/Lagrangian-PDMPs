@@ -31,6 +31,9 @@ include("adjusted reinit.jl")
         #(could cause issues if u[1] = 0 when du[1] = 0)
         #(Try adjusting down the threshold instead if issues arise)
         integrator.u[1] = 0.0
+        if iszero(integrator.dt)
+            auto_dt_reset!(integrator)
+        end
         nothing
     end
 
@@ -39,6 +42,9 @@ include("adjusted reinit.jl")
         integrator.p[1][3] -= integrator.u[1]
         #We adjust our rho integral to be equal to the value of the previous positive parts
         integrator.u[1] = integrator.p[1][2]
+        if iszero(integrator.dt)
+            auto_dt_reset!(integrator)
+        end
         nothing
     end
 
@@ -50,10 +56,11 @@ include("adjusted reinit.jl")
         termination_cb = ContinuousCallback(threshold_condition, threshold_affect!, save_positions = (false, true))
 
         #We cross when du[1] = 0.0
-        #This can be directly implemented as M or taken as M = integrator.f.f(u)[1] 
-        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, integrator.p, t))[1] #du[1] = velocity_dynamics!(...)[1]
+        #This can be directly implemented as M or taken as M = integrator.f.f(u)[1]
 
-        crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true))
+        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, integrator.p, t))[1]  #du[1] = velocity_dynamics!(...)[1]
+
+        crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true), repeat_nudge = 1//1)
         total_cb = CallbackSet(termination_cb, crossing_cb)
 
         dynamics_function!(du, u, p, t) = velocity_dynamics!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
@@ -62,7 +69,7 @@ include("adjusted reinit.jl")
         ff = ODEFunction(dynamics_function!, jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)
         solver = nums.auxiliary_method #AutoTsit5(Rosenbrock23())
-        integrator = init(problem, solver, callback = total_cb, save_everystep=true)
+        integrator = init(problem, solver, callback = total_cb, save_everystep=false)
         return integrator
     end
 

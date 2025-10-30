@@ -40,7 +40,6 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     #We decide whether to follow the PDMP or its reversal
     reversed_pdmp = rand(Bool)
-    @show reversed_pdmp
     #We compute the initial state acceptance and the exponent term
     acceptance = 1.0/full_density_kernel!(pdmp, state, evo_data, nums)
     acceptance_exponent = 0.0
@@ -59,12 +58,12 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         
         #Debugging
         #push!(st_list, SplitState(copy.(state.position), copy.(state.auxiliary), 1))
-        println("-----")
-        println("Running dynamic $dyn on state $state")
+        #println("-----")
+        #println("Running dynamic $dyn on state $state")
         #We follow the flow for a time Δt
         #This updates the reverse and forward rates, as well as the corresponding integrals
         evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
-        println("Segment result: $segment")
+        #println("Segment result: $segment")
         time += segment.time
 
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
@@ -93,24 +92,24 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             transition!(state, pdmp, evo_data, nums, edge, transition)
             
         end
-        println("With acceptance: $acceptance and exponent $acceptance_exponent")
+        #println("With acceptance: $acceptance and exponent $acceptance_exponent")
           
         #If the acceptance is Infinite or NaN we should not keep going
         #This happens when either 1) fwd acceptance/rate is zero
         if isnan(acceptance)
             println("NaN-acceptance")
             @show state
-            @show evo_data
             @show max_time
             @show time
+            @show segment
             error("NaN-accept")
             #should reject the point
         elseif isinf(acceptance)
             println("Inf-acceptance")
             @show state
-            @show evo_data
             @show max_time
             @show time
+            @show segment
             error("Inf-accept")
             #should accept the point if +inf, reject if -inf (though -Inf should be an error)
         elseif iszero(acceptance)
@@ -125,11 +124,10 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
     return acceptance
 end 
 
-function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::Integer = 10, max_time::Float64 = 1.0, initial_state::Union{Nothing, SplitState} = nothing)
+function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::Integer = 10, max_time::Float64 = 1.0, initial_state::Union{Nothing, SplitState} = nothing, evo_data::EvolutionData = initialize_evolution_data(pdmp, nums))
     k = 0
     samples = Vector{Float64}[]
     acceptances = Float64[]
-    evo_data = initialize_evolution_data(pdmp, nums)
 
     # Handle initial state
     if initial_state === nothing
