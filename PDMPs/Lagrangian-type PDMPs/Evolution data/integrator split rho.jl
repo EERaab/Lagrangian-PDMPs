@@ -14,7 +14,7 @@ include("adjusted reinit.jl")
         u0[1] = 0.0 #Corresponds to ∫λ_fwd dt (wrt Z which may or may not be reversed)
         u0[2] = 0.0 #Corresponds to ∫λ_rev dt (wrt Z which may or may not be reversed)
         u0[3] = 0.0 #Our ψ = ∫ div(Φ_v)dt = ∫ tr(Γ) ⋅ vdt
-        @view(u0[3:end]) .= state.auxiliary #the velocity.
+        @view(u0[4:end]) .= state.auxiliary #the velocity.
 
         #This part is iffy. For some reason reinit! allocates, which we cannot abide.
         #We try to fix this by defining our own reinit-method (see separate file), alas this seems to introduce bugs.

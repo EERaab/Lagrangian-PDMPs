@@ -63,12 +63,12 @@
         @views sgnd_ρ = du[3] + dot(du[4:end], trash_vector)
         du[1] = max(0.0, sgnd_ρ) #must be interpreted as the fwd rate (of the possibly reversed pdmp)
         du[2] = max(0.0, -sgnd_ρ) #rev rate 
-        nothing
+        return du
     end
 
 
 #JACOBIAN DYNAMICS
-    function jacobian_dynamics_rates_split_rho!(J, u, p, pdmp::PDMP{M, F, D,T}, trash_matrix, trash_vector) where {M<:Lagrangian_Method, F, D, T}
+    function jacobian_dynamics_split_rho!(J, u, p, pdmp::PDMP{M, F, D,T}, trash_matrix, trash_vector) where {M<:Lagrangian_Method, F, D, T}
         #This is iffy: J will be discontinuous at ρ = 0.
         evo_tensors = p[2]
         reversed_pdmp = p[3].x

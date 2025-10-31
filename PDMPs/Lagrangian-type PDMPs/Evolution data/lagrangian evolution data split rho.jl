@@ -42,7 +42,7 @@ struct LagrangianEvoData{T, S, N, U}<:EvolutionData
     integrator::U
 end
 
-include("integrator.jl")
+include("integrator split rho.jl")
 include("evo tensors.jl")
 
 #Evo-data initialization has been moved into the PDMPs.
@@ -65,7 +65,7 @@ function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParame
     #velocity methods
     velocity_ode_parameters = (MVector(0.0), ini_et, Base.RefValue(false))
     velocity_u0 = zeros(Float64, dim + 3)
-    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, long_trash_vector, trash_vec, trash_mtr1, velocity_u0)
+    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, trash_vec, trash_mtr1, velocity_u0)
     return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, 
         trash_mtr2, long_trash_vector, ada, velocity_ode_parameters, velocity_u0, integrator)
 end

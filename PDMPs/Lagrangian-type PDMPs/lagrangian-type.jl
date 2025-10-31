@@ -3,9 +3,11 @@
 abstract type Lagrangian_Method<:PDMP_Method
 end
 
-include("velocity dynamics.jl")
+include("velocity dynamics split rho.jl")
 
-include("Evolution data/lagrangian evolution data.jl")
+#include("Evolution data/lagrangian evolution data.jl")
+
+include("Evolution data/lagrangian evolution data split rho.jl")
 include("auxiliary kernel.jl")
 
 include("Lagrangian/lagrangian structs.jl")

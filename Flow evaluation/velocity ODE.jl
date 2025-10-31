@@ -27,9 +27,11 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
             
 
 
-        segment.forward_rates[1] = max(0.0, sol(sol.t[end], Val{1})[1])
-        segment.reverse_rates[1] = max(0.0, -(integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[1])
-        
+        segment.forward_rates[1] = sol(sol.t[end], Val{1})[1]
+        segment.reverse_rates[1] = (integrator.f.f(evo_data.long_trash_vector, evo_data.velocity_u0, integrator.p, 0.0))[2]
+        segment.forward_rate_integral = sol.u[end][1]
+        segment.reverse_rate_integral = sol.u[end][2]
+
         if iszero(segment.forward_rates)
             println("Interpolated fwd rate is zero!")
             @show threshold
@@ -37,16 +39,24 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
             @show evo_data.integrator.f.f(evo_data.long_trash_vector, evo_data.integrator.u, evo_data.integrator.p, 0.0)
         end 
 
-        @views state.auxiliary .= sol.u[end][3:end]
-        segment.forward_rate_integral = threshold #or rather, sol.u[end][1] + integrator.p[1][2]
-        segment.reverse_rate_integral = integrator.p[1][3]
-        #Again, we assume there's only a single fwd/rev rate
-        #We treat the volume adjustment factor as an adjustment of the reverse rate integral:
+        @views state.auxiliary .= sol.u[end][4:end]
+        
         if reversed_pdmp
-            segment.reverse_rate_integral += sol.u[end][2]  
+            segment.reverse_rate_integral += sol.u[end][3]  
         else
-            segment.reverse_rate_integral -= sol.u[end][2]
+            segment.reverse_rate_integral -= sol.u[end][3]
         end
+
+        #Non split version:
+        #@views state.auxiliary .= sol.u[end][3:end]
+        #segment.forward_rate_integral = threshold #or rather, sol.u[end][1] + integrator.p[1][2]
+        #segment.reverse_rate_integral = integrator.p[1][3]
+        #We treat the volume adjustment factor as an adjustment of the reverse rate integral:
+        #if reversed_pdmp
+        #    segment.reverse_rate_integral += sol.u[end][2]  
+        #else
+        #    segment.reverse_rate_integral -= sol.u[end][2]
+        #end
         nothing
     end
 
