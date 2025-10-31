@@ -6,7 +6,7 @@ include("adjusted reinit.jl")
         integrator = evo_data.integrator
         #The parameters of our integrator are a tuple integrator.p = (data_vec, EvoTensor, reversed_pdmp)
         #We must reset the first element, an MVector of length 3.
-        data_vec = integrator.p[1] # = (threshold, ∫ρ^+dt, ∫ρ^-dt)
+        data_vec = integrator.p[1] # = (threshold, ∫ρ^+dt, ∫ρ^-dt, ρ > 0)
         data_vec[1] = stoch_threhold
         data_vec[2] = data_vec[3] = 0.0
 
@@ -21,8 +21,10 @@ include("adjusted reinit.jl")
         adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = adjusted)
         #reinit!(integrator, evo_data.velocity_u0)
         integrator.p[3].x = reversed_pdmp
+        integrator.p[4].x = :nil
         nothing
     end
+
 
     function downcrossing_affect!(integrator)
         #We take the 2nd parameter (our fwd rate integral) and add to it the positive part of the rho integral
@@ -34,6 +36,8 @@ include("adjusted reinit.jl")
         if iszero(integrator.dt)
             auto_dt_reset!(integrator)
         end
+        integrator.p[4].x = :downcrossed
+        #println("DC")
         nothing
     end
 
@@ -45,6 +49,8 @@ include("adjusted reinit.jl")
         if iszero(integrator.dt)
             auto_dt_reset!(integrator)
         end
+        integrator.p[4].x = :upcrossed
+        #println("UC")
         nothing
     end
 
@@ -58,10 +64,16 @@ include("adjusted reinit.jl")
         #We cross when du[1] = 0.0
         #This can be directly implemented as M or taken as M = integrator.f.f(u)[1]
 
-        crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, integrator.p, t))[1]  #du[1] = velocity_dynamics!(...)[1]
+        #crossing_condition(u, t, integrator) = (integrator.f.f(long_trash_vector, u, integrator.p, t))[1]  #du[1] = velocity_dynamics!(...)[1]
+        #downcrossing_condition(u, t, integrator) = (integrator.p[4] == "U" ? "less than" : "not less than")(integrator.f.f(long_trash_vector, u, integrator.p, t))[1]
+        #crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true), repeat_nudge = 1//2)
+                    
 
-        crossing_cb = ContinuousCallback(crossing_condition, upcrossing_affect!, affect_neg! = downcrossing_affect!, save_positions = (true, true), repeat_nudge = 1//1)
-        total_cb = CallbackSet(termination_cb, crossing_cb)
+        downcrossing_condition(u, t, integrator) = ((integrator.p[4] == :downcrossed) ? -Inf : (-integrator.f.f(long_trash_vector, u, integrator.p, t)[1]))
+        upcrossing_condition(u, t, integrator) = ((integrator.p[4] == :upcrossed) ? Inf : (integrator.f.f(long_trash_vector, u, integrator.p, t)[1]))
+        down_cb = ContinuousCallback(downcrossing_condition, downcrossing_affect!, affect_neg! = nothing, save_positions = (true, true))
+        up_cb = ContinuousCallback(upcrossing_condition, upcrossing_affect!, affect_neg! = nothing, save_positions = (true, true))
+        total_cb = CallbackSet(termination_cb, down_cb, up_cb)
 
         dynamics_function!(du, u, p, t) = velocity_dynamics!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
         jacobian_function!(J, u , p, t) = jacobian_dynamics!(J, u, p, pdmp, trash_matrix, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)

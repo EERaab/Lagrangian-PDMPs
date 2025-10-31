@@ -20,6 +20,8 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         sol = solve!(integrator)
         if sol.retcode == :MaxIters || (integrator.iter > integrator.opts.maxiters)
             @show state
+            @show threshold
+            @show reversed_pdmp
             error("Bugging out.")
         end
             
