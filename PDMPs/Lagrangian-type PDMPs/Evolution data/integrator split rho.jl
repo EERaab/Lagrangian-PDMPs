@@ -19,7 +19,6 @@ include("adjusted reinit.jl")
         adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = adjusted)
         #reinit!(integrator, evo_data.velocity_u0)
         integrator.p[3].x = reversed_pdmp
-        integrator.p[2] = evo_data.evo_tensors
         nothing
     end
 
