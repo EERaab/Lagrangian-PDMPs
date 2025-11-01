@@ -3,3 +3,5 @@ Diff eq test.jl
 test pdmp.jl
 test tensors.jl
 test ODE.jl
+test rates.jl
+bin states

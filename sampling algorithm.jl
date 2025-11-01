@@ -95,7 +95,6 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         #println("With acceptance: $acceptance and exponent $acceptance_exponent")
           
         #If the acceptance is Infinite or NaN we should not keep going
-        #This happens when either 1) fwd acceptance/rate is zero
         if isnan(acceptance)
             println("NaN-acceptance")
             @show state
