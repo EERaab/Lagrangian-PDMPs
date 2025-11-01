@@ -40,12 +40,15 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         end 
 
         @views state.auxiliary .= sol.u[end][4:end]
-        
-        if reversed_pdmp
-            segment.reverse_rate_integral += sol.u[end][3]  
-        else
-            segment.reverse_rate_integral -= sol.u[end][3]
-        end
+
+        #Note difference in definitions of ψ from old version -> current def will differ in sign from old version
+        segment.reverse_rate_integral += sol.u[end][3]
+        #Old version:
+        #if reversed_pdmp
+        #    segment.reverse_rate_integral += sol.u[end][3]  
+        #else
+        #    segment.reverse_rate_integral -= sol.u[end][3]
+        #end
 
         #Non split version:
         #@views state.auxiliary .= sol.u[end][3:end]
