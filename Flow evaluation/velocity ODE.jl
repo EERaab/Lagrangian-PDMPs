@@ -1,9 +1,6 @@
-function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
+function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
         numerics::NumericalParameters, dyn::VelocityODE; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
 
-        #We pick a stopping threshold randomly.
-        threshold = -log(rand())
-        
         #The "parameters" (param) that determine our equation of motion and rates is partially encoded in evo_tensors.
         fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
         

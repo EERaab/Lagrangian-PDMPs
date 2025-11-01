@@ -1,9 +1,7 @@
 include("definitions.jl")
 
-function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
+function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
     numerics::NumericalParameters, dyn::PositionVelocity; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
-    #We pick a stopping threshold randomly.
-    threshold = -log(rand())
 
     #We update the state and forward rate and its integral until we reach termination, i.e. the max time or the threshold. A zero max_time means we do not bound time.
     is_terminal = update_position!(pdmp, segment, state, max_duration, evo_data, numerics, threshold, numerics.position_method, reversed_pdmp = reversed_pdmp)

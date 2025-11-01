@@ -56,8 +56,9 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         dyn = pdmp.graph.dynamics[vertex.dynamic_number]
         reset_segment!(segment)
 
-        println("Running $dyn on state $((state.position, state.auxiliary))")
-        is_terminal = evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
+        threshold = -log(rand())
+        println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))")
+        is_terminal = evaluate_flow!(threshold, pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         time += segment.time
         println("Segment after evaluation $segment and time $time")
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
