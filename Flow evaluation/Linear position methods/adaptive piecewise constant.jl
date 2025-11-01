@@ -1,5 +1,5 @@
 function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, max_time::Float64, evolution_data::EvolutionData, 
-    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)::Nothing where N
+    numerics::NumericalParameters, threshold::Float64, position_method::VTAdaptivePiecewiseConstant; reversed_pdmp::Bool = false)::Bool where N
     #We initialize a trash state that is repeatedly overwritten when computing the adaptive step
     vertex = pdmp.graph.vertices[state.split_index.x]
     dyn = pdmp.graph.dynamics[vertex.dynamic_number]
@@ -8,7 +8,7 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
     fwd_state = evolution_data.adaptive_data.adaptive_state
     fwd_state.auxiliary .= state.auxiliary
     fwd_rates = evolution_data.adaptive_data.adaptive_fwd_rates
-    
+    is_terminal = false
     while !((threshold ≤ segment.forward_rate_integral)||(0 < max_time ≤ segment.time))
         #We should update the rate, but we want to adapt to ρ, not λ. Hence we fetch ρ instead. The actual rate(s) is max(0, ρ) (or max(0,ρ_1), max(0, ρ_2),...)
         fetch_rates!(segment.forward_rates, pdmp, state, evolution_data, numerics, dyn, reversed_pdmp = reversed_pdmp)
@@ -55,9 +55,9 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         threshtime = (threshold - segment.forward_rate_integral)/ΔI
         if max_time > 0
             Δt = min(max_time - segment.time, threshtime, ϵ)
-            #if ϵ >= max_time - segment.time && max_time - segment.time < threshtime
-            #    segment.terminal = true
-            #end   
+            if ϵ ≥ max_time - segment.time && threshtime ≥ max_time - segment.time  #i.e. Δt = max_time - segment.time
+                is_terminal = true
+            end   
         else
             Δt = min(threshtime, ϵ) 
         end
@@ -75,15 +75,10 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         #We terminate the process if we've reached a terminal point. Otherwise we keep on looping.
         #Technically this should already be handled by the condition in the while-loop
         if ϵ > Δt
-            if max_time > 0.0
-                segment.time = min(max_time, segment.time + threshtime)
-            else
-                segment.time += threshtime
-            end
-            return nothing
+            return is_terminal
         end
     end
-    return nothing
+    return is_terminal
 end
 
 function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}, state::SplitState, 

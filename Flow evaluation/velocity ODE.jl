@@ -60,6 +60,6 @@ function evaluate_flow!(pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_
         #else
         #    segment.reverse_rate_integral -= sol.u[end][2]
         #end
-        nothing
+        return false
     end
 

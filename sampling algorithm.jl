@@ -49,7 +49,8 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
     #When debugging:
     #st_list = []
     #seg_list = []
-    while time < max_time
+    is_terminal = time > max_time
+    while !is_terminal
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = evo_data.segments[vertex.segment_rate_number]
@@ -62,7 +63,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
         #println("Running dynamic $dyn on state $state")
         #We follow the flow for a time Δt
         #This updates the reverse and forward rates, as well as the corresponding integrals
-        evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
+        is_terminal = evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         #println("Segment result: $segment")
         time += segment.time
 
@@ -75,7 +76,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             acceptance *= rev_acceptance(segment, rev_edge_number)
         end
 
-        if time < max_time
+        if !is_terminal#time < max_time
             #We enter a new state (possibly stochastically) depending on the end state of the segment
             #Notably we assume here that the reversed pdmp can use the forward graph (i.e. that the two are isomorphic in some sense)
             
