@@ -50,17 +50,8 @@
             du[i+3] -= symmetric_double_dot(v, @view(Γ[i,:,:])) 
         end
 
-        #We begin to compute ρ = dψ/dt + dv^i/dt G_{ij}v^j
-        #First we construct G_{ij}v^j
-        mul!(trash_vector, G, v)
-
-
-        #We adjust for PDMP-reversal:
-        if reversed_pdmp
-            du .*= (-1)            
-        end
-
-        @views sgnd_ρ = du[3] + dot(du[4:end], trash_vector)
+        #We compute ρ = dψ/dt + dv^i/dt G_{ij}v^
+        @views sgnd_ρ = du[3] + dot(du[4:end], G, u[4:end])
         du[1] = max(0.0, sgnd_ρ) #must be interpreted as the fwd rate (of the possibly reversed pdmp)
         du[2] = max(0.0, -sgnd_ρ) #rev rate 
         return du
@@ -83,7 +74,7 @@
 
         
 
-        #J = ∂([(-1)^rev*ρ]^+, [-(-1)^rev*ρ]^+, dψ, dv^1, dv^2, …, dv^n)/∂u^j 
+        #J = ∂([(-1)^rev*ρ]^+, [-(-1)^rev*ρ]^+, (-1)^rev dψ, (-1)^rev dv^1, (-1)^rev dv^2, …, (-1)^rev dv^n)/∂u^j 
         #with u = (I, ψ, v^1, …, v^n).
 
 
