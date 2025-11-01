@@ -31,14 +31,15 @@ function update_position!(pdmp::PDMP, segment::Segment{N}, state::SplitState, ma
         #We compute the adapted step size
         rho = evolution_data.adaptive_data.rho
         fwd_rho = evolution_data.adaptive_data.fwd_rho
-        M = -Inf
-        @inbounds for i in eachindex(rho)
-            L =  abs(rho[i]-fwd_rho[i])
-            if L > M
-                M = L
-            end
-        end
-        mult = sqrt(tol/(h*M))
+        #M = -Inf
+        #@inbounds for i in eachindex(rho)
+        #    L =  abs(rho[i]-fwd_rho[i])
+        #    if L > M
+        #        M = L
+        #    end
+        #end
+        #mult = sqrt(tol/(h*M))
+        mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
         if mult > position_method.max_adaptive_rel_size
             ϵ = position_method.max_adaptive_rel_size*h
         elseif mult < (position_method.max_adaptive_rel_size)^(-1)
@@ -117,15 +118,15 @@ function compute_backward_approximated_integral!(pdmp::PDMP, segment::Segment{N}
         #We compute the adapted step size
         rho = evolution_data.adaptive_data.rho
         fwd_rho = evolution_data.adaptive_data.fwd_rho
-        M = -Inf
-        @inbounds for i in eachindex(rho)
-            L =  abs(rho[i]-fwd_rho[i])
-            if L > M
-                M = L
-            end
-
-        end
-        mult = sqrt(tol/(h*M))
+        #M = -Inf
+        #@inbounds for i in eachindex(rho)
+        #    L =  abs(rho[i]-fwd_rho[i])
+        #    if L > M
+        #        M = L
+        #    end
+        #end
+        #mult = sqrt(tol/(h*M))
+        mult = sqrt(tol/(h*maximum(abs.(rho - fwd_rho))))
         if mult > position_method.max_adaptive_rel_size
             ϵ = position_method.max_adaptive_rel_size*h
         elseif mult < (position_method.max_adaptive_rel_size)^(-1)
