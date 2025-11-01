@@ -30,7 +30,7 @@ function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{M, F, D, T}
 end
 
 function sample_auxiliary!(pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
-    vel = similar(position)
+    vel = zeros(Float64, pdmp.target.dimension)
     sample_auxiliary_in_place!(vel, pdmp, position, evo_data, numerics)
     return vel
 end

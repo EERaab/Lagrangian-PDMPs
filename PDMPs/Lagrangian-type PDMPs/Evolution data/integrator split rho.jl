@@ -9,18 +9,17 @@ include("adjusted reinit.jl")
         data_vec = integrator.p[1] # = (threshold)
         data_vec[1] = stoch_threhold
 
-        #Our new initial rate/velocity is ∼[0,0, state.velocity]
+        #Our new initial rate/velocity is ∼[0,0,0, state.velocity]
         u0 = evo_data.velocity_u0
         u0[1] = 0.0 #Corresponds to ∫λ_fwd dt (wrt Z which may or may not be reversed)
         u0[2] = 0.0 #Corresponds to ∫λ_rev dt (wrt Z which may or may not be reversed)
         u0[3] = 0.0 #Our ψ = ∫ div(Φ_v)dt = ∫ tr(Γ) ⋅ vdt
         @view(u0[4:end]) .= state.auxiliary #the velocity.
 
-        #This part is iffy. For some reason reinit! allocates, which we cannot abide.
-        #We try to fix this by defining our own reinit-method (see separate file), alas this seems to introduce bugs.
         adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = adjusted)
         #reinit!(integrator, evo_data.velocity_u0)
         integrator.p[3].x = reversed_pdmp
+        integrator.p[2] = evo_data.evo_tensors
         nothing
     end
 
@@ -37,7 +36,7 @@ include("adjusted reinit.jl")
         ff = ODEFunction(dynamics_function!, jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)
         solver = nums.auxiliary_method 
-        integrator = init(problem, solver, callback = total_cb, save_everystep=false)
+        integrator = init(problem, solver, callback = total_cb, save_everystep=true)
         return integrator
     end
 

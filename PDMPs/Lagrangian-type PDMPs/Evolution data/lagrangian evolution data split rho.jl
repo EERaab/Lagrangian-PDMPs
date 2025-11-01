@@ -51,7 +51,7 @@ function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParame
     ini_pd = initialize_point_data(dim)
     ini_sd = initialize_spectral_data(dim)
     ini_et = EvoTensors(dim)
-    segments = Dict{Int64, Union{Segment{1}, Segment{2}}}(1 => Segment{1}(), 2=>Segment{2}())
+    segments = Dict{Int64, Segment{1}}(1 => Segment{1}())
     #Avoiding allocations:
     fwd_position = zeros(Float64, dim) #used to store forward position when computing reversal in position
     trash_vec = zeros(Float64, dim) 

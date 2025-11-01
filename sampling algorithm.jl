@@ -34,7 +34,7 @@ end
 #Rather we have to look at all transitions out of a segment and then adjust the acceptance accordingly.
 #This cause a lot of clunkiness unfortunately (reverse edges, initial/final trackers etc)
 
-function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64)
+function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64, thresholds; verbose = true)
     #We start our "clock" at t = 0 and terminate at t = max_time
     time = 0.0
 
@@ -46,21 +46,22 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     initial = true
     rev_edge_number = 1
-    
+    k=0
     is_terminal = time > max_time
-    println("pdmp is reversed: $reversed_pdmp")
+    verbose ? println("pdmp is reversed: $reversed_pdmp") : nothing
+
     while !is_terminal
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = evo_data.segments[vertex.segment_rate_number]
         dyn = pdmp.graph.dynamics[vertex.dynamic_number]
         reset_segment!(segment)
-
-        threshold = -log(rand())
-        println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))")
+        k+=1
+        threshold = thresholds[k]#-log(rand())
+        verbose ? println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))") : nothing
         is_terminal = evaluate_flow!(threshold, pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         time += segment.time
-        println("Segment after evaluation $segment and time $time")
+        verbose ?  println("Segment after evaluation $segment and time $time") : nothing
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
         
         if initial
@@ -87,9 +88,9 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             transition!(state, pdmp, evo_data, nums, edge, transition)
             
         end
-        println("Acceptance rate factor $acceptance with exp. $acceptance_exponent")
-        is_terminal ? println("State is terminal") : nothing
-        println("----------")
+        verbose ? println("Acceptance rate factor $acceptance with exp. $acceptance_exponent") : nothing
+        verbose && is_terminal ? println("State is terminal") : nothing
+        verbose ? println("----------") : nothing
         if iszero(acceptance)
             return acceptance
         end        

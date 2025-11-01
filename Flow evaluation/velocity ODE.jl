@@ -12,7 +12,10 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
         sol = solve!(integrator)
 
 
-        segment.forward_rates[1] = (integrator.f.f(evo_data.long_trash_vector, sol.u[end], integrator.p, 0.0))[1]
+        segment.forward_rates[1] = (sol(sol.t[end], Val{1})[1])
+        if !(sol(sol.t[end], Val{1})[1] .≈ segment.forward_rates[1])
+            @warn "Unstable interpolation : $((sol(sol.t[end], Val{1})[1] , segment.forward_rates[1]))"
+        end
         segment.forward_rate_integral = sol.u[end][1]
         segment.reverse_rate_integral = sol.u[end][2]
 
