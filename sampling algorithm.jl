@@ -46,27 +46,20 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     initial = true
     rev_edge_number = 1
-    #When debugging:
-    #st_list = []
-    #seg_list = []
+    
     is_terminal = time > max_time
+    println("pdmp is reversed: $reversed_pdmp")
     while !is_terminal
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = evo_data.segments[vertex.segment_rate_number]
         dyn = pdmp.graph.dynamics[vertex.dynamic_number]
         reset_segment!(segment)
-        
-        #Debugging
-        #push!(st_list, SplitState(copy.(state.position), copy.(state.auxiliary), 1))
-        #println("-----")
-        #println("Running dynamic $dyn on state $state")
-        #We follow the flow for a time Δt
-        #This updates the reverse and forward rates, as well as the corresponding integrals
-        is_terminal = evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
-        #println("Segment result: $segment")
-        time += segment.time
 
+        println("Running $dyn on state $((state.position, state.auxiliary))")
+        is_terminal = evaluate_flow!(pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
+        time += segment.time
+        println("Segment after evaluation $segment and time $time")
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
         
         if initial
@@ -93,26 +86,10 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             transition!(state, pdmp, evo_data, nums, edge, transition)
             
         end
-        #println("With acceptance: $acceptance and exponent $acceptance_exponent")
-          
-        #If the acceptance is Infinite or NaN we should not keep going
-        if isnan(acceptance)
-            println("NaN-acceptance")
-            @show state
-            @show max_time
-            @show time
-            @show segment
-            error("NaN-accept")
-            #should reject the point
-        elseif isinf(acceptance)
-            println("Inf-acceptance")
-            @show state
-            @show max_time
-            @show time
-            @show segment
-            error("Inf-accept")
-            #should accept the point if +inf, reject if -inf (though -Inf should be an error)
-        elseif iszero(acceptance)
+        println("Acceptance rate factor $acceptance with exp. $acceptance_exponent")
+        is_terminal ? println("State is terminal") : nothing
+        println("----------")
+        if iszero(acceptance)
             return acceptance
         end        
     end
@@ -139,10 +116,10 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
     while k < max_point_attempts
         #We take the last state position and initialize a new state with a resampled velocity.
         new_state = initialize_state!(pdmp, evo_data, nums, initial_position = copy.(samples[end]))
-
+        
         acceptance = new_point!(pdmp, new_state, evo_data, nums, max_time)
-        acceptance = min(1, acceptance)
-
+        
+        acceptance = min(1., acceptance)
         push!(acceptances, acceptance)
 
         if rand() < acceptance
