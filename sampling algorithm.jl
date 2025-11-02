@@ -34,12 +34,10 @@ end
 #Rather we have to look at all transitions out of a segment and then adjust the acceptance accordingly.
 #This cause a lot of clunkiness unfortunately (reverse edges, initial/final trackers etc)
 
-function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64; verbose = false)
+function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64; verbose = false, reversed_pdmp::Bool = rand(Bool), thresholds = nothing)
     #We start our "clock" at t = 0 and terminate at t = max_time
     time = 0.0
-
-    #We decide whether to follow the PDMP or its reversal
-    reversed_pdmp = rand(Bool)
+    
     #We compute the initial state acceptance and the exponent term
     acceptance = 1.0/full_density_kernel!(pdmp, state, evo_data, nums)
     acceptance_exponent = 0.0
@@ -50,13 +48,19 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
     is_terminal = time > max_time
     verbose ? println("pdmp is reversed: $reversed_pdmp") : nothing
 
+    k = 0
     while !is_terminal
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
         vertex = pdmp.graph.vertices[state.split_index.x]
         segment = evo_data.segments[vertex.segment_rate_number]
         dyn = pdmp.graph.dynamics[vertex.dynamic_number]
         reset_segment!(segment)
-        threshold = -log(rand())
+        if thresholds === nothing
+            threshold = -log(rand())
+        else
+            k += 1
+            threshold = thresholds[k]
+        end 
         verbose ? println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))") : nothing
         is_terminal = evaluate_flow!(threshold, pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         time += segment.time
