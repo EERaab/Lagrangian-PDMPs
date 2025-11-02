@@ -10,6 +10,9 @@ function rev_acceptance(segment::Segment, edge_number::Integer)::Float64
 end
 
 function select_edge_number(segment::Segment{N})::Int64 where N
+    if N == 1
+        return 1
+    end
     q = rand()*sum(segment.forward_rates::MVector{N, Float64})
     s = 0.0
     for i ∈ eachindex(segment.forward_rates::MVector{N, Float64})
