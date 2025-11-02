@@ -69,10 +69,7 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
 
     if run_adjusted
         #This should be used with care. We use a check here to ensure that we empty the t-stops if the state of the integrator is not as expectted.
-        while !isempty(integrator.opts.tstops)
-            #print("Non-empty t-stop heap.")
-            pop!(integrator.opts.tstops)
-        end
+        empty!(integrator.opts.tstops)
         push!(integrator.opts.tstops, tType(tf))
     else
         tspan = (tType(t0), tType(tf))

@@ -28,6 +28,13 @@ struct EvoTensors
     end
 end
 
+function multiply_by_diag_inv!(trash_matrix, diag_matrix::Diagonal, right_matrix)
+    for i in eachindex(diag_matrix.diag)
+        @views trash_matrix[i,:] .=  right_matrix[i,:] ./ diag_matrix.diag[i]
+    end
+    return trash_matrix
+end
+
 function diagonal_inv!(D::Diagonal)
     D.diag .= D.diag .^(-1)
     return D
@@ -117,11 +124,16 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     end
 
     #Now for the metric
-    #Notably this maps Dinv ↦ D so Dinv no longer stores Dinv actually.
-    D = diagonal_inv!(Dinv) 
-    mul!(trash_matrix1, D, QT)
+    multiply_by_diag_inv!(trash_matrix1, Dinv, QT)
     mul!(G.data, Q, trash_matrix1)
-    #If we wanted to we could restore Dinv:
-    diagonal_inv!(Dinv)
+
+    ##OLD METHOD
+    #Notably this maps Dinv ↦ D so Dinv no longer stores Dinv actually.
+        #D = diagonal_inv!(Dinv) 
+        #mul!(trash_matrix1, D, QT)
+        #mul!(G.data, Q, trash_matrix1)
+        #If we wanted to we could restore Dinv:
+        #diagonal_inv!(Dinv)
+        #@show U .≈ G
     return evo_tensors
 end

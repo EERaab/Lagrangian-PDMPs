@@ -127,7 +127,7 @@
             @views J[1, :] .*= 0.0
         else 
             #Should throw an error?
-            error("Unstable derivative at ρ = 0")
+            @warn "Unstable derivative at ρ = 0"
         end
 
         #J[1,:], and J[2,:] are now unaltered, but all others can change their sign

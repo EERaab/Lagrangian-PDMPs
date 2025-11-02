@@ -170,3 +170,7 @@ function initialize_state!(pdmp::PDMP, evo_data::EvolutionData, nums::NumericalP
     
     return SplitState(initial_position, initial_auxiliary, initial_split_index)
 end
+
+function copy_state(st::SplitState)
+    return SplitState(copy.(st.position), copy.(st.auxiliary), Base.RefValue(st.split_index.x))
+end
