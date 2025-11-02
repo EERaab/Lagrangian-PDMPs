@@ -18,8 +18,8 @@ include("adjusted reinit.jl")
 
         adjusted_reinit!(integrator, evo_data.velocity_u0, run_adjusted = adjusted)
         #reinit!(integrator, evo_data.velocity_u0)
+
         integrator.p[3].x = reversed_pdmp
-        auto_dt_reset!(integrator)
         nothing
     end
 
@@ -28,7 +28,7 @@ include("adjusted reinit.jl")
         threshold_condition(u, t, integrator) = integrator.p[1][1] - u[1]
         threshold_affect!(integrator) = terminate!(integrator)
 
-        total_cb = ContinuousCallback(threshold_condition, threshold_affect!, save_positions = (false, true))
+        total_cb = ContinuousCallback(threshold_condition, threshold_affect!, save_positions = (true, true))
 
         dynamics_function!(du, u, p, t) = velocity_dynamics_split_rho!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
         jacobian_function!(J, u , p, t) = jacobian_dynamics_split_rho!(J, u, p, pdmp, trash_matrix, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)
@@ -36,7 +36,7 @@ include("adjusted reinit.jl")
         ff = ODEFunction(dynamics_function!, jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)
         solver = nums.auxiliary_method 
-        integrator = init(problem, solver, callback = total_cb, save_everystep=true)
+        integrator = init(problem, solver, callback = total_cb)
         return integrator
     end
 

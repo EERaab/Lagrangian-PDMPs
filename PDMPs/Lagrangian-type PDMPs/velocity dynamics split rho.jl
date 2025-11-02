@@ -29,7 +29,7 @@
         #u = ([ρ]^+, [-ρ]^+, ψ, v^1, v^2, …, v^n) and du[1], du[2] can be found explicitly from du[3:end]
         v = @view(u[4:end])
 
-        du[3] = 2.0 * dot(v, Γ_trace) #dψ/dt
+        du[3] = 2.0 .* dot(v, Γ_trace) #dψ/dt
         
         #The velocity vector (v= du[3:end]) satisfies dv = -Γ^i_{jk}v^jv^k-G^{ij}ϕ_{,j} dt
         #For the SL-BPS method ϕ = -log π + (log det G )/2 where the latter has derivative tr(G^{-1}v(G))/2 = Γ^i_{ij}
@@ -39,7 +39,7 @@
         if M == Lagrangian
             trash_vector .= ∇π .- Γ_trace #(log π_{,j} - Γ^k_{kj})
         elseif M == Version62
-            trash_vector .= -Γ_trace
+            trash_vector .= (-1) .* Γ_trace
         else
             error("Unimplemented!")
         end
