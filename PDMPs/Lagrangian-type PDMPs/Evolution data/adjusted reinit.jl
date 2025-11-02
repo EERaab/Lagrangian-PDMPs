@@ -71,6 +71,8 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
         #This should be used with care. We use a check here to ensure that we empty the t-stops if the state of the integrator is not as expectted.
         empty!(integrator.opts.tstops)
         push!(integrator.opts.tstops, tType(tf))
+        #empty!(integrator.opts.saveat)
+        #empty!(integrator.opts.d_discontinuities)
     else
         tspan = (tType(t0), tType(tf))
         integrator.opts.tstops = OrdinaryDiffEqCore.initialize_tstops(tType, tstops, d_discontinuities, tspan)

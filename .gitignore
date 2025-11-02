@@ -6,3 +6,4 @@ test ODE.jl
 test rates.jl
 bin states
 states with du
+test evo drift.jl
