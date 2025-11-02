@@ -5,10 +5,10 @@
 #Conveniently all Lagrangian-type methods share the same basic evolution data.
 
     #The pointwise numerical derivatives are stored in PointData.
-    mutable struct PointData
+    mutable struct PointData{DRP, DRV}
         gradient::Vector{Float64}
-        position_update_data::DiffResults.MutableDiffResult
-        velocity_update_data::DiffResults.MutableDiffResult
+        position_update_data::DRP
+        velocity_update_data::DRV
     end
 
     #Given the pointwise data we also store spectral data about the hessian.
@@ -22,8 +22,8 @@
     #Given the spectral data we construct some tensors that are used to compute the rates in the velocity update.
     #Their exact fields that we need to include will depend on the PDMP so we just define a abstract type here
 
-struct LagrangianEvoData{T, S, N, U}<:EvolutionData
-    point_data::PointData
+struct LagrangianEvoData{T, S, N, U, PD}<:EvolutionData
+    point_data::PD
     spectral_data::SpectralData
     evo_tensors::T
     segments::S
