@@ -125,9 +125,14 @@ function adjusted_reinit!(integrator::OrdinaryDiffEqCore.ODEIntegrator, u0 = int
     integrator.erracc = typeof(integrator.erracc)(1)
     integrator.dtacc = typeof(integrator.dtacc)(1)
 
-    if reset_dt
+    ############ THIS SHOULD PROBABLY BE RUN? The reset_dt default appears incorrect in the PDMP
+    ############ case, but auto_dt_reset! allocates because of the ode_suggest_initial_dt allocating
+    ############ when computing f(u0), f(u0+h)
+    if reset_dt 
         auto_dt_reset!(integrator)
     end
+
+    ###############################################################################################
 
     if reinit_dae &&
        (integrator.isdae || SciMLBase.has_initializeprob(integrator.sol.prob.f))
