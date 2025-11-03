@@ -15,9 +15,11 @@
         return value
     end
 
-    function velocity_dynamics_split_rho!(du, u, p, pdmp::PDMP{M, F, D,T}, trash_vector) where {M<:Lagrangian_Method, F, D, T}
+    function velocity_dynamics_split_rho!(du, u, p)
         evo_tensors = p[2]
         reversed_pdmp = p[3].x #p[3] is a ref to a bool.
+        trash_vector = p[4]
+        method = p[6]
 
         #Some shorthands are convenient.
         Γ_trace = evo_tensors.Γ_trace
@@ -36,9 +38,9 @@
         #For CA-BPS ϕ = (log det G )/2
         #Thus ϕ_{,i} = Γ_trace_i - β ∂_i log π with β = 0 or 1
         #Hence dv^i = -Γ^i_{jk}v^jv^k + G^{ij} (log π_{,j} - Γ^k_{kj}) dt
-        if M == Lagrangian
+        if method == :Lagrangian
             trash_vector .= ∇π .- Γ_trace #(log π_{,j} - Γ^k_{kj})
-        elseif M == Version62
+        elseif method == :Version6_2
             trash_vector .= (-1) .* Γ_trace
         else
             error("Unimplemented!")
@@ -64,10 +66,14 @@
 
 
 #JACOBIAN DYNAMICS
-    function jacobian_dynamics_split_rho!(J, u, p, pdmp::PDMP{M, F, D,T}, trash_matrix, trash_vector) where {M<:Lagrangian_Method, F, D, T}
+    function jacobian_dynamics_split_rho!(J, u, p)
         #This is iffy: J will be discontinuous at ρ = 0.
         evo_tensors = p[2]
         reversed_pdmp = p[3].x
+        trash_vector = p[4]
+        trash_matrix = p[5]
+        M = p[6]
+        
         #Some shorthands are convenient.
         Γ_trace = evo_tensors.Γ_trace
         Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
@@ -75,7 +81,6 @@
         G_inv = evo_tensors.metric_inv
         ∇π = evo_tensors.gradient
 
-        dim = pdmp.target.dimension
 
         
 
@@ -95,13 +100,13 @@
 
         #(dv/dt)/dv = -2 (Γv)
         v = @view(u[4:end])
-        for j ∈ 1:dim
+        for j ∈ eachindex(v) #to avoid referring to dim explicitly
             @views mul!(J[j+3,4:end], (-2.0 .* Γ[j, :, :]), v)
         end
 
         #(dρ/dt)/dv = mess, see docs.
         @views J[1, 4:end] .= Γ_trace
-        if M == Lagrangian
+        if M == :Lagrangian
             @views J[1, 4:end] .+= ∇π    
         end
 

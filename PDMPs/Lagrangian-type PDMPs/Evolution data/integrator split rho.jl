@@ -23,15 +23,15 @@ include("adjusted reinit.jl")
         nothing
     end
 
-    function initialize_integrator(pdmp::PDMP, param, nums::NumericalParameters, trash_vector, trash_matrix, u0)
+    function initialize_integrator(param, nums::NumericalParameters, u0)
         #We terminate when the (positive part of the) du[1] integral exceeds some certain value
         threshold_condition(u, t, integrator) = integrator.p[1][1] - u[1]
         threshold_affect!(integrator) = terminate!(integrator)
 
         total_cb = ContinuousCallback(threshold_condition, threshold_affect!, save_positions = (true, true))
 
-        dynamics_function!(du, u, p, t) = velocity_dynamics_split_rho!(du, u, p, pdmp, trash_vector)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
-        jacobian_function!(J, u , p, t) = jacobian_dynamics_split_rho!(J, u, p, pdmp, trash_matrix, trash_vector)#jacobian_dynamics!(J, u, p, pdmp)
+        dynamics_function!(du, u, p, t) = velocity_dynamics_split_rho!(du, u, p)#velocity_dynamics!(du, u, p, pdmp, trash_vector)
+        jacobian_function!(J, u , p, t) = jacobian_dynamics_split_rho!(J, u, p)#jacobian_dynamics!(J, u, p, pdmp)
 
         ff = ODEFunction(dynamics_function!, jac = jacobian_function!)
         problem = ODEProblem(ff, u0, Inf, param)

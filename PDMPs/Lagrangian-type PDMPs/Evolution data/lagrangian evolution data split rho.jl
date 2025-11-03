@@ -37,7 +37,7 @@ struct LagrangianEvoData{T, S, N, U, PD}<:EvolutionData
     #adaptive methods
     adaptive_data::AdaptiveData{N}
     #velocity methods
-    velocity_ode_parameters::Tuple{MVector{1, Float64}, T, Base.RefValue{Bool}}
+    velocity_ode_parameters::Tuple{MVector{1, Float64}, T, Base.RefValue{Bool}, Vector{Float64}, Matrix{Float64}, Symbol}
     velocity_u0::Vector{Float64}
     integrator::U
 end
@@ -63,9 +63,10 @@ function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParame
     st = SplitState(zeros(Float64, dim), zeros(Float64, dim), Base.RefValue{Int64}(1))
     ada = AdaptiveData{dim}(adaptive_state = st)
     #velocity methods
-    velocity_ode_parameters = (MVector(0.0), ini_et, Base.RefValue(false))
+    (M == Lagrangian) ? method_symbol = :Lagrangian : method_symbol = :Version6_2
+    velocity_ode_parameters = (MVector(0.0), ini_et, Base.RefValue(false), trash_vec, trash_mtr1, method_symbol)
     velocity_u0 = zeros(Float64, dim + 3)
-    integrator = initialize_integrator(pdmp, velocity_ode_parameters, nums, trash_vec, trash_mtr1, velocity_u0)
+    integrator = initialize_integrator(velocity_ode_parameters, nums, velocity_u0)
     return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, 
         trash_mtr2, long_trash_vector, ada, velocity_ode_parameters, velocity_u0, integrator)
 end
