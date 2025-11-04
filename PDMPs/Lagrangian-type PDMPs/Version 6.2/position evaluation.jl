@@ -1,4 +1,5 @@
-function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::SplitState, evolution_data::LagrangianEvoData{EvoTensorsVersion6_2}, numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive::Bool = false)
+function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2, F, D, T}, state::SplitState, evolution_data::LagrangianEvoData, 
+    numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive_fwd::Bool = false) where {F,D,T}
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evolution_data.point_data, pdmp, state, numerics.diff_method, dyn)
     
@@ -9,41 +10,49 @@ function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2}, state::SplitState,
     #We determine the value of rho which fully determines the rate.
     gr = dot(evolution_data.point_data.gradient, state.auxiliary)
     #gr = evolution_data.point_data.gradient'*state.auxiliary
-    t1, t2 = rho_point_values(evolution_data, gr, state.auxiliary)
+    ρ_refl, ρ_vel = rho_point_values(evolution_data, gr, state.auxiliary)
     
+    double_reversal = (reversed_pdmp && reverse)||(!reversed_pdmp && !reverse)
+    double_reversal ? ((sgnd_ρ_refl, sgnd_ρ_vel) = (-ρ_refl, -ρ_vel)) : ((sgnd_ρ_refl, sgnd_ρ_vel) = (ρ_refl, ρ_vel))
+
     #Finally we return the apropriate rate, depending on our pdmp and possible reversal.
-    if (pdmp.reversed && reverse)||(!pdmp.reversed && !reverse)
-        #We update the acutal rate.
-        rates[1] = max(0, t1)
-        rates[2] = max(0, t2)
-        #If we use adaptive methods we will adapt not based on the rates but on the "signed" rates, which must be returned
-        if adaptive
-            return t1, t2
-        end
-        return rates
+    rates[1] = max(0.0, sgnd_ρ_refl)
+    rates[2] = max(0.0, sgnd_ρ_vel)
+    if adaptive_fwd
+        evolution_data.adaptive_data.fwd_rho[1] = sgnd_ρ_refl
+        evolution_data.adaptive_data.fwd_rho[2] = sgnd_ρ_vel
+    else
+        evolution_data.adaptive_data.rho[1] = sgnd_ρ_refl
+        evolution_data.adaptive_data.rho[2] = sgnd_ρ_vel
     end
-    #If we use adaptive methods we will adapt not based on the rates but on the "signed" rates, which must be returned
-    rates[1] = max(0, -t1)
-    rates[2] = max(0, -t2)
-    if adaptive 
-        return -t1, -t2
-    end
-    return rates
+    nothing
 end
 
-function rho_point_values(evoldata::LagrangianEvoData{EvoTensorsVersion6_2}, gr::Float64, v::Vector{Float64})::Tuple{Float64,Float64}
-    specdata = evoldata.spectral_data
-    pointdata = evoldata.point_data
+function rho_point_values(evo_data::LagrangianEvoData, gr::Float64, v::Vector{Float64})
+    specdata = evo_data.spectral_data
+    pointdata = evo_data.point_data
     Q = specdata.Q
     QT = specdata.Q'
     J = specdata.jmatrix
-    Dinv=specdata.Dinv
+    Dinv = specdata.Dinv
 
-    dirhess::Matrix{Float64} = DiffResults.derivative(pointdata.position_update_data)
-    vM::Matrix{Float64} = J .* (QT*dirhess*Q)
-    term1::Float64 = - gr
+    term1 = -gr 
 
-    P = QT*v
-    term2::Float64 = dot(P,vM,P)/2.0 - tr(vM*Dinv)/2
+    dirhess = DiffResults.derivative(pointdata.position_update_data)
+    trash1 = evo_data.trash_matrix1
+    vM = evo_data.trash_matrix2 #vM = (QT*v(H)*Q) as for velocities - just with an extra v-contraction
+    mul!(trash1, dirhess, Q)
+    mul!(vM, QT, trash1)
+    vL = trash1
+    vL .= J .* vM #vL = J ∘ vM as for velocities
+
+    P = evo_data.trash_vec
+    mul!(P, QT, v)
+    term2 = -dot(P,vL,P) #G_{ij,k}v^iv^jv^k 
+    @inbounds for i in eachindex(Dinv.diag)
+        term2 += vL[i,i] * Dinv.diag[i] 
+    end
+    term2 /= 2.0
+
     return term1, term2
 end

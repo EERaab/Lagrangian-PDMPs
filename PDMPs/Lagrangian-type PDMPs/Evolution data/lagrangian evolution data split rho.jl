@@ -30,6 +30,7 @@ struct LagrangianEvoData{T, S, N, U, PD}<:EvolutionData
     #Avoiding allocations:
     fwd_position::Vector{Float64} #used in backkward integral approximations
     trash_vec::Vector{Float64} #used to compute matrix products while avoiding allocations
+    trash_vec2::Vector{Float64} #used to compute vector products while avoiding allocations
     trash_matrix1::Matrix{Float64}
     trash_matrix2::Matrix{Float64}
     #For use in the velocity ODE-method
@@ -51,10 +52,15 @@ function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParame
     ini_pd = initialize_point_data(dim)
     ini_sd = initialize_spectral_data(dim)
     ini_et = EvoTensors(dim)
-    segments = Dict{Int64, Segment{1}}(1 => Segment{1}())
+    if M == Lagrangian
+        segments = Dict{Int64, Segment{1}}(1 => Segment{1}())
+    elseif M == Version6_2
+        segments = Dict{Int64, Union{Segment{1}, Segment{2}}}(1 => Segment{1}(), 2 => Segment{2}())
+    end
     #Avoiding allocations:
     fwd_position = zeros(Float64, dim) #used to store forward position when computing reversal in position
     trash_vec = zeros(Float64, dim) 
+    trash_vec2 = zeros(Float64, dim) 
     trash_mtr1 = zeros(Float64, dim, dim)
     trash_mtr2 = zeros(Float64, dim, dim)
     #For use in the velocity ODE-method
@@ -67,7 +73,7 @@ function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParame
     velocity_ode_parameters = (MVector(0.0), ini_et, Base.RefValue(false), trash_vec, trash_mtr1, method_symbol)
     velocity_u0 = zeros(Float64, dim + 3)
     integrator = initialize_integrator(velocity_ode_parameters, nums, velocity_u0)
-    return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_mtr1, 
+    return LagrangianEvoData(ini_pd, ini_sd, ini_et, segments, fwd_position, trash_vec, trash_vec2, trash_mtr1, 
         trash_mtr2, long_trash_vector, ada, velocity_ode_parameters, velocity_u0, integrator)
 end
 

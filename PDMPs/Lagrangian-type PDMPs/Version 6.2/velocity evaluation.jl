@@ -1,12 +1,19 @@
-function reflect!(state::SplitState, pdmp::PDMP{Version6_2}, evo_data::EvolutionData)
+function reflect!(state::SplitState, pdmp::PDMP{Version6_2, F, D,T}, evo_data::EvolutionData) where {F,D,T}
     #We compute the reflection covector
     w = evo_data.point_data.gradient
 
-    #We raise w to a vector
-    invG_w = (evo_data.spectral_data.Q)*evo_data.spectral_data.Dinv*(evo_data.spectral_data.Q')*w
+    #We compute u^i = G^{ij}(∂_j log π)
+    vec = evo_data.trash_vec
+    u = evo_data.trash_vec2
+    mul!(vec, evo_data.spectral_data.Q',w)
+    vec .*= evo_data.spectral_data.Dinv.diag
+    mul!(u, evo_data.spectral_data.Q, vec)
+    
+    #Old version:
+    #u = (evo_data.spectral_data.Q)*evo_data.spectral_data.Dinv*(evo_data.spectral_data.Q')*w
 
     #The reflection is now trivial to compute
-    state.auxiliary .-= 2*invG_w*(dot(state.auxiliary, w)/dot(w, invG_w))
-    #state.auxiliary .-= 2*invG_w*((state.auxiliary'*w)/(w'*invG_w))
+    projection_factor = 2*dot(state.auxiliary, w)/dot(w, u)
+    state.auxiliary .-= projection_factor .* u
     return state.auxiliary
 end
