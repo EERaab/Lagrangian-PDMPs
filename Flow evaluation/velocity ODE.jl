@@ -13,9 +13,9 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     
     #### FOR SOME REASON integrator.f.f(du,u0, p, nothing) allocates.
     # We get around this by using velocity_dynamics_split_rho! 
-    #(AND ASSUME THAT EVERY CALL TO THIS dyn METHOD defines such a function)
+    # (AND ASSUME THAT EVERY CALL TO THIS dyn METHOD defines such a function)
     # Less elegant, but we cannot abide allocations.
-    #Old, alloc version: 'integrator.f.f(du, evo_data.velocity_u0, integrator.p, 0.0)'
+    # Old, alloc version: 'integrator.f.f(du, evo_data.velocity_u0, integrator.p, 0.0)'
     velocity_dynamics_split_rho!(du, evo_data.velocity_u0, integrator.p)
 
     segment.reverse_rates[1] = du[2]
@@ -25,13 +25,16 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     get_du!(du, integrator)
     segment.forward_rates[1] = du[1]
     
-    segment.forward_rate_integral = sol.u[end][1]
-    segment.reverse_rate_integral = sol.u[end][2]
+    final_state = sol.u[end]
 
-    @views state.auxiliary .= sol.u[end][4:end]
-
-    #Note difference in definitions of ψ from old version -> current def will differ in sign from old version
-    segment.reverse_rate_integral += sol.u[end][3]
+    update_velocity_flow_values!(segment, state, final_state)
+    
     return false
 end
 
+function update_velocity_flow_values!(segment, state, final_state)
+    segment.forward_rate_integral = final_state[1]
+    segment.reverse_rate_integral = final_state[2] + final_state[3]
+    @views state.auxiliary .= final_state[4:end]
+    return nothing
+end

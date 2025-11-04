@@ -128,6 +128,9 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
         acceptance = new_point!(pdmp, new_state, evo_data, nums, max_time)
         
         acceptance = min(1., acceptance)
+        if isnan(acceptance) #corresponds to fwd_acceptance = 0
+            acceptance = 0 
+        end
         push!(acceptances, acceptance)
 
         if rand() < acceptance
