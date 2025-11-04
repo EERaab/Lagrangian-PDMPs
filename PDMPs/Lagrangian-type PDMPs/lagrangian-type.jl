@@ -5,11 +5,9 @@ end
 
 include("velocity dynamics split rho.jl")
 
-#include("Evolution data/lagrangian evolution data.jl")
-
 include("Evolution data/lagrangian evolution data split rho.jl")
 include("auxiliary kernel.jl")
 
 include("Lagrangian/lagrangian structs.jl")
-#include("Version 6.2/bps-lagrangian structs.jl")
+include("Version 6.2/bps-lagrangian structs.jl")
 

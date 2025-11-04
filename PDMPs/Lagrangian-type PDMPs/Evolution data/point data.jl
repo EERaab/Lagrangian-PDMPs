@@ -25,6 +25,7 @@ end
 
 function fetch_hessian!(point_data::PointData, log_density::Function, position::Array{Float64,1}, diff_method::ForwardDer)
     point_data.position_update_data.value = ForwardDiff.hessian!(point_data.position_update_data.value, log_density, position)
+    #Could also include an update of the velocity_update data
     nothing
 end
 

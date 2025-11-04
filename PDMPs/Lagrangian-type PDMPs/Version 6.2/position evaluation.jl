@@ -1,5 +1,5 @@
-function fetch_rates!(rates::MVector, pdmp::PDMP{Version6_2, F, D, T}, state::SplitState, evolution_data::LagrangianEvoData, 
-    numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, adaptive_fwd::Bool = false) where {F,D,T}
+function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Version6_2, F, D, T}, state::SplitState, evolution_data::LagrangianEvoData, 
+    numerics::NumericalParameters, dyn::PositionVelocity; reverse::Bool = false, reversed_pdmp::Bool = false, adaptive_fwd::Bool = false) where {N, F,D,T}
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evolution_data.point_data, pdmp, state, numerics.diff_method, dyn)
     

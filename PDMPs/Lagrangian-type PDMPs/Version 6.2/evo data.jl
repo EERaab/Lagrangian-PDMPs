@@ -26,6 +26,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP{Version6_2, F, D, T
     nothing
 end
 
+
 function fetch_evo_data!(pdmp::PDMP{Version6_2, F, D, T}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, dyn::VelocityODE) where {F, D, T}
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evo_data.point_data, pdmp, state, numerics.diff_method, dyn)
@@ -38,13 +39,26 @@ function fetch_evo_data!(pdmp::PDMP{Version6_2, F, D, T}, evo_data::LagrangianEv
     nothing
 end
 
+function fetch_gradient!(point_data::PointData, pdmp::PDMP{Version6_2, F, D, T}, state::SplitState, diff_method::ForwardDer) where {F,D,T}
+    #We compute the gradient.
+    ForwardDiff.gradient!(point_data.gradient, pdmp.target.log_density, state.position)
+
+    nothing
+end
+
+function fetch_gradient!(point_data::PointData, pdmp::PDMP{Version6_2, F, D, T}, state::SplitState, diff_method::AnalyticalDer) where {F,D,T}
+    #We compute the gradient.
+    diff_method.gradient!(point_data.gradient, state.position)
+    nothing
+end
 
 function fetch_evo_data!(pdmp::PDMP{Version6_2, F, D, T}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, transition::GradientReflection) where {F, D, T}
-    #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
-    fetch_point_data!(evo_data.point_data, pdmp, state, numerics.diff_method, dyn)
-    
+    #We determine the values of the Hessian and the gradient (stored in *position* data here)
+    fetch_hessian!(evo_data.point_data, pdmp.target.log_density, state.position, numerics.diff_method)
+
+    fetch_gradient!(evo_data.point_data, pdmp, state, numerics.diff_method)
     #The point data is processed through an eigendecomposition, which is used to define the spectral data (Q, QT, Dinv, J).
-    hessian = evo_data.point_data.velocity_update_data.value
+    hessian = evo_data.point_data.position_update_data.value
     fetch_spectral_data!(evo_data.spectral_data, hessian, pdmp.method.hardness)
 
     nothing

@@ -13,7 +13,7 @@ function reflect!(state::SplitState, pdmp::PDMP{Version6_2, F, D,T}, evo_data::E
     #u = (evo_data.spectral_data.Q)*evo_data.spectral_data.Dinv*(evo_data.spectral_data.Q')*w
 
     #The reflection is now trivial to compute
-    projection_factor = 2*dot(state.auxiliary, w)/dot(w, u)
+    projection_factor = 2.0*dot(state.auxiliary, w)/dot(w, u)
     state.auxiliary .-= projection_factor .* u
     return state.auxiliary
 end
