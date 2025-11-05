@@ -50,7 +50,6 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
 
     is_terminal = time > max_time
     verbose ? println("pdmp is reversed: $reversed_pdmp") : nothing
-
     k = 0
     while !is_terminal
         #Due to us using isomorphisms to cut down on allocations we have a convoluted representation of the segment and vertex.
@@ -86,13 +85,12 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             acceptance /= fwd_acceptance(segment, edge_number)
 
             edge = pdmp.graph.edges[state.split_index.x][edge_number]
-            
+            verbose ? println("Moving through edge number $edge_number from vertex $(state.split_index.x) to $(edge.target_vertex_number)") : nothing
             rev_edge_number = reversed_edge_number(pdmp.graph, edge)
-            
             transition = pdmp.graph.transitions[edge.transition_number]
             #We adjust the state 
             transition!(state, pdmp, evo_data, nums, edge, transition)
-            
+            verbose ? println("Transition through $transition") : nothing
         end
         verbose ? println("Acceptance rate factor $acceptance with exp. $acceptance_exponent") : nothing
         verbose && is_terminal ? println("State is terminal") : nothing

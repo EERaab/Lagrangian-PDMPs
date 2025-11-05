@@ -9,7 +9,8 @@ function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{Version6_2, F, D, T
 
     #We determine the value of rho which fully determines the rate.
     gr = dot(evolution_data.point_data.gradient, state.auxiliary)
-    #gr = evolution_data.point_data.gradient'*state.auxiliary
+    #It is very goofy to throw this into rho_point values. OPTIMIZE/CLEAN.    
+
     ρ_refl, ρ_vel = rho_point_values(evolution_data, gr, state.auxiliary)
     
     double_reversal = (reversed_pdmp && reverse)||(!reversed_pdmp && !reverse)
@@ -36,7 +37,7 @@ function rho_point_values(evo_data::LagrangianEvoData, gr::Float64, v::Vector{Fl
     J = specdata.jmatrix
     Dinv = specdata.Dinv
 
-    term1 = -gr 
+    term1 = gr 
 
     dirhess = DiffResults.derivative(pointdata.position_update_data)
     trash1 = evo_data.trash_matrix1

@@ -72,7 +72,7 @@
         reversed_pdmp = p[3].x
         trash_vector = p[4]
         trash_matrix = p[5]
-        M = p[6]
+        method = p[6]
         
         #Some shorthands are convenient.
         Γ_trace = evo_tensors.Γ_trace
@@ -106,7 +106,7 @@
 
         #(dρ/dt)/dv = mess, see docs.
         @views J[1, 4:end] .= Γ_trace
-        if M == :Lagrangian
+        if method == :Lagrangian
             @views J[1, 4:end] .+= ∇π    
         end
 
