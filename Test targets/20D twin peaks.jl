@@ -37,13 +37,13 @@ function jachess_tp_20D!(jachess::Array{Float64,3}, X::Vector{Float64})
 end
     
 
-function dirhess_tp_20D!(dirhess::Array{Float64,2}, X::Vector{Float64}, V::Vector{Float64})
+function dirhess_tp_20D!(dirhess::Matrix{Float64}, X::Vector{Float64}, V::Vector{Float64})
     R = exp((-sum(X)/2)+2.5)
     sv = sum(V)
     fill!(dirhess, 0.125*sv*(R-R^2)/(R+1)^3)
     return dirhess
 end
 
-analytical_derivatives = AnalyticalDer(grad_tp_20D!, hess_tp_20D!, dirhess_tp_20D!, jachess_tp_20D!)
-    
+ders = LagrangianDerivatives(grad_tp_20D!, hess_tp_20D!, jachess_tp_20D!, dirhess_tp_20D!, false)
+
 target = TargetData(log_twin_peaks_20D, 20)
