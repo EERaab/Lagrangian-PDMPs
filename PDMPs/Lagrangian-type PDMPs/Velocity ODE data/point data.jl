@@ -1,10 +1,13 @@
 #For ForwardDiff we use this function to fetch point data.
 function fetch_point_data!(point_data::PointData, pdmp::PDMP, state::SplitState, derivatives::LagrangianDerivatives, dyn::VelocityODE)
-    derivatives.full_third_order!(point_data.velocity_update_data, state.position)
 
-    if !derivatives.hessian_computed_in_higher_order
+    if derivatives.hessian_computed_in_higher_order
+        derivatives.full_third_order!(point_data.velocity_update_data, state.position)
+    else
+        derivatives.full_third_order!(point_data.velocity_update_data.derivs[1], state.position)
         derivatives.hessian!(point_data.velocity_update_data.value, state.position)
     end
+
 
     derivatives.gradient!(point_data.gradient, state.position)
     
