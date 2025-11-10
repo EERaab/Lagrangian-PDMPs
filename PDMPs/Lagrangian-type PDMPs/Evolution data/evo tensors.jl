@@ -8,9 +8,6 @@ struct EvoTensors
     #These fields correspond to the two types of term in Γ^i_{jk}.
     Term1::Array{Float64, 3} 
     Term2::Array{Float64, 3} 
-    #These fields are just here to avoid allocations
-    trash_r3_tensor1::Array{Float64, 3} 
-    trash_r3_tensor2::Array{Float64, 3} 
 
     function EvoTensors(dim::Integer)
         Γ_trace = zeros(Float64, dim)
@@ -21,10 +18,7 @@ struct EvoTensors
         #These fields correspond to the two types of term in Γ^i_{jk}.
         Term1 = zeros(Float64, dim, dim, dim)
         Term2= zeros(Float64, dim, dim, dim)
-        #These fields are just here to avoid allocations
-        trash_r3_tensor1 = zeros(Float64, dim, dim, dim)
-        trash_r3_tensor2 = zeros(Float64, dim, dim, dim)
-        return new(Γ_trace, Γ, metric, metric_inv, gradient, Term1, Term2, trash_r3_tensor1, trash_r3_tensor2)
+        return new(Γ_trace, Γ, metric, metric_inv, gradient, Term1, Term2)
     end
 end
 
@@ -49,15 +43,15 @@ function simplified_trace(D::Diagonal, M)
 end
 
 function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
-    specdata = evolution_data.spectral_data
-    pointdata = evolution_data.point_data
+    specdata = evolution_data.core.spectral_data
+    pointdata = evolution_data.core.point_data
 
     Q = specdata.Q
     QT = specdata.Q'
     J = specdata.jmatrix
     Dinv = specdata.Dinv
 
-    evo_tensors = evolution_data.evo_tensors
+    evo_tensors = evolution_data.core.evo_tensors
     Γ_trace = evo_tensors.Γ_trace
     Γ = evo_tensors.Γ #Γ^{a}_{bc} = Γ[a,b,c]
     G = evo_tensors.metric
@@ -68,11 +62,13 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     #JH_{ijk} =∂_i ∂_j ∂_k log π i.e. jachess_tens[i,j,k]. Totally symmetric.
     jachess_tens = pointdata.velocity_update_data.derivs[1] 
 
-    trash_matrix1 = evolution_data.trash_matrix1
-    trash_matrix2 = evolution_data.trash_matrix2    
+    trash_matrix1 = evolution_data.workspace.matrix1
+    trash_matrix2 = evolution_data.workspace.matrix2
+    trash_tensor1 = evolution_data.workspace.r3_tensor1 
+    trash_tensor2 = evolution_data.workspace.r3_tensor2
 
     #(M_k)_{ij} = (Q^T*H_k*Q)_{ij} i.e. M[i,j,k] = (QT * H[:,:,k]*Q)[i,j]
-    M = evo_tensors.trash_r3_tensor1 
+    M = trash_tensor1 
 
 
 
@@ -81,7 +77,7 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
         @views mul!(M[:,:,k], QT, trash_matrix1)
     end
     #(L_k)_{ij} = (J ∘ M_k)_{ij} i.e. L[i,j,k] = J[i,j]*M[i,j,k] = (Julia broadcasting quirk) = (J .* M)[i,j,k]
-    L = evo_tensors.trash_r3_tensor2
+    L = trash_tensor2
     L .= J .* M
 
     #Γ^i_{jk}= (1/2)*G^{il}(G_{lj,k}+G_{lk,j}-G_{jk,l})
@@ -101,7 +97,7 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     #also
     #T2[:, j, k] = ((Q*≀D≀^{-1}*QT)*S[j,k,:])
 
-    S = evo_tensors.trash_r3_tensor1
+    S = trash_tensor1
     T1 = evo_tensors.Term1
     for k in 1:dim
         @views mul!(trash_matrix2, L[:,:,k], QT)
@@ -127,13 +123,5 @@ function fetch_evo_tensors!(evolution_data::EvolutionData, dim::Int64)
     multiply_by_diag_inv!(trash_matrix1, Dinv, QT)
     mul!(G.data, Q, trash_matrix1)
 
-    ##OLD METHOD
-    #Notably this maps Dinv ↦ D so Dinv no longer stores Dinv actually.
-        #D = diagonal_inv!(Dinv) 
-        #mul!(trash_matrix1, D, QT)
-        #mul!(G.data, Q, trash_matrix1)
-        #If we wanted to we could restore Dinv:
-        #diagonal_inv!(Dinv)
-        #@show U .≈ G
     return evo_tensors
 end

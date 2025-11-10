@@ -147,22 +147,6 @@ end
     fwd_rho::MVector{N, Float64} = @MVector zeros(Float64, N)
 end
 
-
-abstract type DifferentiationMethod
-end
-
-struct ForwardDer<:DifferentiationMethod
-end
-
-#This part below needs reworking
-struct AnalyticalDer{F1,F2,F3,F4}<:DifferentiationMethod
-    gradient!::F1
-    hessian!::F2
-    third_order_directional!::F3
-    third_order_full!::F4
-end
-
-
 function initialize_state!(pdmp::PDMP, evo_data::EvolutionData, nums::NumericalParameters; 
     initial_position = rand(pdmp.target.dimension), 
     initial_auxiliary = sample_auxiliary!(pdmp, initial_position, evo_data, nums),

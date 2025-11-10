@@ -13,9 +13,9 @@ function fetch_rates!(rates::MVector{N, Float64}, pdmp::PDMP{BPS}, state::SplitS
         rates[1] = max(0.0, -k)
     end
     if adaptive_fwd
-        evolution_data.adaptive_data.fwd_rho[1] = k
+        evolution_data.workspace.adaptive_data.fwd_rho[1] = k
     else
-        evolution_data.adaptive_data.rho[1] = k
+        evolution_data.workspace.adaptive_data.rho[1] = k
     end
     nothing
 end

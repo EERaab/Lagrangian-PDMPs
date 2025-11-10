@@ -5,8 +5,8 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
         
     reset_integrator!(evo_data, state, threshold, reversed_pdmp)
-    integrator = evo_data.integrator
-    du = evo_data.long_trash_vector
+    integrator = evo_data.velocity_ode_data.integrator
+    du = evo_data.velocity_ode_data.long_vector
 
     #We explicitly assume that the events are of a single type here!
     #In a future implementation this could change.
@@ -16,7 +16,7 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     # (AND ASSUME THAT EVERY CALL TO THIS dyn METHOD defines such a function)
     # Less elegant, but we cannot abide allocations.
     # Old, alloc version: 'integrator.f.f(du, evo_data.velocity_u0, integrator.p, 0.0)'
-    velocity_dynamics_split_rho!(du, evo_data.velocity_u0, integrator.p)
+    velocity_dynamics_split_rho!(du, evo_data.velocity_ode_data.velocity_u0, integrator.p)
 
     segment.reverse_rates[1] = du[2]
 

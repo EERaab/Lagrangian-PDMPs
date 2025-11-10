@@ -2,11 +2,17 @@
 struct BPS<:BPS_Method
 end
 
-@kwdef struct BPSNumerics{P<:PositionMethod,D<:DifferentiationMethod}<:NumericalParameters
-    #position_type::Type = Vector{Float64}
-    #auxiliary_type::Type = Vector{Float64}
-    position_method::P = VTPiecewiseConstant(0.01)
-    diff_method::D = ForwardDer()
+struct BPSNumerics{P<:PositionMethod, D}<:NumericalParameters
+    position_method::P
+    gradient!::D
+
+    function BPSNumerics(pdmp::PDMP{M, F, X, T}; position_method = VTPiecewiseConstant(0.01), gradient! = default_grad_bps(pdmp)) where {M<:BPS_Method, F, X, T}
+        new{typeof(position_method), typeof(gradient!)}(position_method, gradient!)
+    end
+end
+
+function default_grad_bps(pdmp::PDMP{M, F, D, T}) where {M<:BPS_Method, F, D, T}
+    return (grad, X) -> ForwardDiff.gradient!(grad, pdmp.target.log_density, X)
 end
 
 function generate_pdmp_graph(method::BPS, target::TargetData{F})::PDMP_DiGraph where F

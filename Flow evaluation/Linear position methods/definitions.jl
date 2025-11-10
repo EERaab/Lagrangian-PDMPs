@@ -6,8 +6,6 @@ end
 
 @kwdef struct VTPiecewiseConstant<:VT
     step_size::Float64 = 0.01
-
-    #VTPiecewiseConstant(step_size) = (step_size ≤ 0 ) ? error("Negative step size - please specify a positive step size.") : new(step_size)
 end
 
 @kwdef struct VTAdaptivePiecewiseConstant<:VT

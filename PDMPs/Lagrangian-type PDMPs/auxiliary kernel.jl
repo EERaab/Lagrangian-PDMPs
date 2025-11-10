@@ -17,42 +17,39 @@ function normal_distr!(vec::Vector{Float64}, Q::Matrix{Float64}, D::Diagonal{Flo
 end
 
 
-function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
+function sample_auxiliary_in_place!(vel::Vector{Float64}, pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     #We determine the hessian
-    fetch_hessian!(evo_data.point_data, pdmp.target.log_density, position, numerics.diff_method)
+    hessian = evo_data.core.point_data.position_update_data.value
+    numerics.derivatives.hessian!(hessian, position)
     
-    #We determine the spectral data associated to the hessian. It has the unfortunate name evo_data.point_data.position_update_data.value
-    fetch_spectral_data!(evo_data.spectral_data, evo_data.point_data.position_update_data.value, pdmp.method.hardness)
+    #We determine the spectral data associated to the hessian. 
+    fetch_spectral_data!(evo_data.core.spectral_data, hessian, pdmp.method.hardness)
 
-    Q = evo_data.spectral_data.Q
-    Dinv = evo_data.spectral_data.Dinv
-    return normal_distr!(vel, Q, Dinv, evo_data.trash_vec)
+    Q = evo_data.core.spectral_data.Q
+    Dinv = evo_data.core.spectral_data.Dinv
+    return normal_distr!(vel, Q, Dinv, evo_data.workspace.vector1)
 end
 
-function sample_auxiliary!(pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data::LagrangianEvoData, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
+function sample_auxiliary!(pdmp::PDMP{M, F, D, T}, position::Array{Float64,1}, evo_data, numerics::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     vel = zeros(Float64, pdmp.target.dimension)
     sample_auxiliary_in_place!(vel, pdmp, position, evo_data, numerics)
     return vel
 end
 
 
-function auxiliary_kernel!(pdmp::PDMP{M, F, D, T}, state::SplitState, evo_data::LagrangianEvoData, numerics::NumericalParameters)  where {M<:Lagrangian_Method, F, D, T}
+function auxiliary_kernel!(pdmp::PDMP{M, F, D, T}, state::SplitState, evo_data, numerics::NumericalParameters)  where {M<:Lagrangian_Method, F, D, T}
     #We determine the hessian
-    fetch_hessian!(evo_data.point_data, pdmp.target.log_density, state.position, numerics.diff_method)
-    
-    #We determine the spectral data associated to the hessian. It has the unfortunate name evo_data.point_data.position_update_data.value
-    hessian = evo_data.point_data.position_update_data.value
-    fetch_spectral_data!(evo_data.spectral_data, hessian, pdmp.method.hardness)
+    hessian = evo_data.core.point_data.position_update_data.value
+    numerics.derivatives.hessian!(hessian, state.position)
 
-    Dinv = evo_data.spectral_data.Dinv
+    #We determine the spectral data associated to the hessian.
+    fetch_spectral_data!(evo_data.core.spectral_data, hessian, pdmp.method.hardness)
+
+    Dinv = evo_data.core.spectral_data.Dinv
     
-    L = evo_data.trash_vec
-    mul!(L, evo_data.spectral_data.Q', state.auxiliary)
-    #evo_data.trash_vec .= evo_data.spectral_data.Q'*state.auxiliary
+    L = evo_data.workspace.vector1
+    mul!(L, evo_data.core.spectral_data.Q', state.auxiliary)
 
     return exp(-dot(L, inv(Dinv), L)/2)/sqrt(abs(det(Dinv)))
-    #L = evo_data.spectral_data.Q'*state.auxiliary
-
-    #return exp(-(L'*inv(evo_data.spectral_data.Dinv)*L)/2)/sqrt(abs(det(evo_data.spectral_data.Dinv)))
 end
 
