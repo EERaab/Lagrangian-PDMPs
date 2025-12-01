@@ -7,4 +7,4 @@ test rates.jl
 bin states
 states with du
 test evo drift.jl
-patched illustration.ipynb
+split flow functions.jl

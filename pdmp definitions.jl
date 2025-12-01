@@ -9,7 +9,7 @@ end
     struct VelocityODE<:DynType
     end
 
-    struct VelocityPartial <:DynType
+    struct SplitVelocityFlow <:DynType
         component::Int64
     end
 

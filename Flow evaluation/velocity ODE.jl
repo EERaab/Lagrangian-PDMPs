@@ -2,7 +2,7 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     numerics::NumericalParameters, dyn::VelocityODE; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
 
     #The "parameters" (param) that determine our equation of motion and rates is partially encoded in evo_tensors.
-    fetch_evo_data!(pdmp, evo_data, numerics, state, dyn)
+    fetch_core_data!(pdmp, evo_data, numerics, state, dyn)
         
     reset_integrator!(evo_data, state, threshold, reversed_pdmp)
     integrator = evo_data.velocity_ode_data.integrator

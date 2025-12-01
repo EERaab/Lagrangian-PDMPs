@@ -14,7 +14,7 @@ function fetch_point_data!(point_data::PointData, pdmp::PDMP, state::SplitState,
     nothing
 end
 
-function fetch_evo_data!(pdmp::PDMP, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, dyn::VelocityODE)
+function fetch_core_data!(pdmp::PDMP, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, dyn::VelocityODE)
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evo_data.core.point_data, pdmp, state, numerics.derivatives, dyn)
     
@@ -26,7 +26,7 @@ function fetch_evo_data!(pdmp::PDMP, evo_data::LagrangianEvoData, numerics::Nume
     nothing
 end
 
-function fetch_evo_data!(pdmp::PDMP{Version6_2, F, D, T}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, transition::GradientReflection) where {F, D, T}
+function fetch_core_data!(pdmp::PDMP{Version6_2, F, D, T}, evo_data::LagrangianEvoData, numerics::NumericalParameters, state::SplitState, transition::GradientReflection) where {F, D, T}
     pd = evo_data.core.point_data
     sd = evo_data.core.spectral_data
     

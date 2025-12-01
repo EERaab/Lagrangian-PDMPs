@@ -21,7 +21,7 @@ function initialize_evolution_data(pdmp::PDMP{BPS, F, D, T}, nums::NumericalPara
     return BPSEvoData(seg_dict, work, grad)
 end
 
-function fetch_evo_data!(pdmp::PDMP{BPS, F, D, T}, evo_data::BPSEvoData, numerics::NumericalParameters, state::SplitState, dyn_type::Union{DynType,TransitionType}) where {F, D, T}
+function fetch_core_data!(pdmp::PDMP{BPS, F, D, T}, evo_data::BPSEvoData, numerics::NumericalParameters, state::SplitState, dyn_type::Union{DynType,TransitionType}) where {F, D, T}
     numerics.gradient!(evo_data.gradient, state.position)
     nothing
 end
