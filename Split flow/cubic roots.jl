@@ -170,7 +170,10 @@
         end
         return T
     end
-
+    
+    function partition_by_roots!(J::Integer, evo_data::SplitEvoData, dir::Integer, u0::Float64) 
+        return partition_by_roots!(evo_data.velocity_partition, J, evo_data.signed_rho_J, dir, u0)
+    end
 ####
 
 # A test that should be moved into a separate folder.

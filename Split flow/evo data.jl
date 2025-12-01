@@ -22,9 +22,9 @@ end
 struct SplitVelocityData{K}
     velocity_partition::BinaryMinHeap{Tuple{Float64, Int64}}
     reduced_v::Vector{Float64}
-    rho_J::Matrix{Float64} #Could be tuple of static vectors!
+    signed_rho_J::Matrix{Float64} #Could be tuple of static vectors!
     As::Matrix{Float64} #Could be tuple of statics!
-    sign_vector::Vector{Float64}
+    sign_vector::Vector{Int64}
     M_adj_rhoJ:: Matrix{Float64} #Could be static matrix!
     M_matrix::MMatrix{4, 4, Float64} #Could be static matrix!
     #F_positive::MVector{4, Float64}
@@ -68,7 +68,7 @@ function fetch_divergences!(dim, J, evo_data)
     return A
 end
 
-function fetch_rho!(ρJ, J, A, dim)
+function fetch_signed_rho!(ρJ, J, A, dim; reversed_pdmp = false)
     #We should transpose ρJ as Julia uses column-major order
     @inbounds for I in 1:dim
         if I ≠ J
@@ -80,6 +80,9 @@ function fetch_rho!(ρJ, J, A, dim)
 
     @views ρJ[n+1, :] .= (-A[n+1,:] ./ dim) 
 
+    if reversed_pdmp
+        return -ρJ
+    end
     return ρJ
 end
 
@@ -113,7 +116,7 @@ function fetch_split_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics, state, 
     v_red = split_data.reduced_v
     J = dyn.component
     dim = pdmp.target.dimension
-    ρJ = split_data.rho_J
+    ρJ = split_data.signed_rho_J
     M_adj_ρJ = split_data.M_adj_rhoJ
 
     #To compute our contractions we set v_red here:
@@ -123,13 +126,14 @@ function fetch_split_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics, state, 
     #We compute the I-divergences:
     fetch_divergences!(dim, J, evo_data)
 
-    #We compute ρJ from which we can determine the rates:
-    fetch_rho!(ρJ, J, As, dim) 
-
     #Note that as for the other Lagrangian PDMPs we define ρ explicitly as a particular combination 
     #of tensors. Under reversal of the PDMP we do not redefine ρ, rather we return ρ_sgnd = - ρ.
     #In other words: ρ_sgnd = (-1)^reversed_pdmp × ρ.
-    #Here this is implemented in 'fetch velocity parameters' and in the value of 'M_adj_ρJ'.
+    #Here this is implemented in 'fetch velocity parameters' and in the value of 'ρJ'.
+
+    #We compute ρJ_sgnd from which we can determine the rates:
+    fetch_signed_rho!(ρJ, J, As, dim, reversed_pdmp = reversed_pdmp) 
+
 
     #We need to build F-vectors. To do this we take several stepes
         #To determine the initial rates we need the M-matrices.
@@ -143,9 +147,6 @@ function fetch_split_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics, state, 
         #We build the M-adjusted ρJ:
         #OPTIMIZE: Build the transpose instead of M to avoid transposition & consider column-major
         mul!(M_adj_ρJ, M_matrix', ρJ)
-        if reversed_pdmp
-            M_adj_ρJ .= -M_adj_ρJ
-        end
         
         #From the ρJ we compute the F-vectors and sign vectors.
         ini_u_tuple = (u0^3, u0^2, u0, 1.0) 
@@ -186,9 +187,9 @@ function fetch_F_vectors!(evo_data, J)
                 error("Unimplemented! But should be implemented")
             end
         elseif sign_vector[I] > 0
-            @views F_positive += M_adj_rho[J,:]
+            @views F_positive += M_adj_rho[I,:]
         else 
-            @views F_negative += M_adj_rho[J,:]
+            @views F_negative += M_adj_rho[I,:]
         end
     end
     return F_positive, F_negative
