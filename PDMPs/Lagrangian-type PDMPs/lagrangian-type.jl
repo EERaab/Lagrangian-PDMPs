@@ -26,14 +26,18 @@ include("default derivatives.jl")
 include("Lagrangian/lagrangian structs.jl")
 include("Version 6.2/bps-lagrangian structs.jl")
 
-#Lagrangian and Version 6.2 both use a shared numerics structure.
+#Lagrangian and Version 6.2 both use a shared numerics and evolution data structure.
 include("Velocity ODE data/Lagrangian numerics.jl")  
+#Split velocity has its own evolution data.
+#include("Thingamajig")
+
+
 
 function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     if M == Lagrangian || M == Version6_2
         return LagrangianEvoData(pdmp, nums)
-    elseif M == :PLACEHOLDER
-        error("Unimplemented")
+    elseif M == SplitVelocity
+        return SplitEvoData(pdmp)
     else
         error("Unimplemented")
     end

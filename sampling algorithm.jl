@@ -21,6 +21,9 @@ function select_edge_number(segment::Segment{N})::Int64 where N
             return i#The edge: pdmp.graph.edges[state.split_index.x][i]
         end
     end
+    #Due to floats we can in fact come through the loop without a return.
+    @warn "Float imprecision in edge selection: Sum $s with termination at $q"
+    return N 
 end
 ####################################################################################################
 

@@ -1,8 +1,20 @@
-struct SplitEvoData{S, PD, T, N, K}
+struct SplitEvoData{S, PD, T, N}
     segments::S
     core::LagrangianCoreData{PD, T}
     workspace::LagrangianWorkspaceVariables{N}
-    split_data::SplitVelocityData{K}
+    split_data::SplitVelocityData
+
+    function SplitEvoData(pdmp::PDMP)
+        return SplitEvoData(pdmp.target.dimension)
+    end
+
+    function SplitEvoData(dim::Integer)
+        segments = Dict{Int64, Segment{dim}}((dim) => Segment{dim}())
+        core = LagrangianCoreData(dim)
+        workspace = LagrangianWorkspaceVariables(dim)
+        split_data = SplitVelocityData(dim)
+        new(segments, core, workspace, split_data)
+    end
 end
 
 
@@ -19,16 +31,27 @@ function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::Numerica
     nothing
 end
 
-struct SplitVelocityData{K}
+struct SplitVelocityData
     velocity_partition::BinaryMinHeap{Tuple{Float64, Int64}}
     reduced_v::Vector{Float64}
     signed_rho_J::Matrix{Float64} #Could be tuple of static vectors!
     As::Matrix{Float64} #Could be tuple of statics!
     sign_vector::Vector{Int64}
     M_adj_rhoJ:: Matrix{Float64} #Could be static matrix!
-    M_matrix::MMatrix{4, 4, Float64} #Could be static matrix!
+    #M_matrix::MMatrix{4, 4, Float64} #Could be static matrix!
     #F_positive::MVector{4, Float64}
     #F_negative::MVector{4, Float64}
+
+    function SplitVelocityData(dim)
+        velocity_partition = BinaryMinHeap{Tuple{Float64, Int64}}()
+        reduced_v = zeros(Float64, dim)
+        signed_rho_J = zeros(Float64, dim + 1, 4)
+        As = zeros(Float64, dim + 1, 4)
+        sign_vector = zeros(Float64, dim + 1)
+        M_adj_rhoJ = zeros(Float64, dim + 1, 4)
+        #M_matrix = @MMatrix zeros(Float64, 4, 4)
+        return new(velocity_partition, reduced_v, signed_rho_J, As, sign_vector, M_adj_rhoJ)#, M_matrix)
+    end
 end
 
 
@@ -142,7 +165,8 @@ function fetch_split_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics, state, 
         (dir, param, flow_class) = direction_velocity_and_type(a, b, c, state.auxiliary[J])
 
         #Now we compute the M-matrix:
-        M_matrix = M_matrix!(M, flow_class, param)
+        α, β = M_matrix_parameters(flow_class, param)
+        M_matrix = static_M_matrix!(α, β)
 
         #We build the M-adjusted ρJ:
         #OPTIMIZE: Build the transpose instead of M to avoid transposition & consider column-major
@@ -196,7 +220,7 @@ function fetch_F_vectors!(evo_data, J)
 end
 
 
-function M_matrix!(M::MMatrix{4,4, Float64, 16}, flow_class::VelocityFunctions, param)
+function M_matrix_parameters(flow_class::VelocityFunctions, param)::Tuple{Float64, Float64}
     # This is a bit goofy, but should be OK.
     if flow_class == type0
         error("This should not be called.")
@@ -218,19 +242,15 @@ function M_matrix!(M::MMatrix{4,4, Float64, 16}, flow_class::VelocityFunctions, 
     else
         error("Flow type recognition error.")
     end
-    return M_matrix!(M, α, β)
+    return α, β
 end
 
-
-function M_matrix!(M::MMatrix{4,4, Float64, 16}, α, β)
-    S = @SMatrix [1.0 2.0 3.0 4.0; 0.0 1.0 3.0 6.0; 0.0 0.0 1.0 4.0; 0.0 0.0 0.0 1.0]
-    for i in 1:4
-        for j in i:4
-            M[i, j] = (α^(i-j))
-        end
-        factor = (β^i)
-        @views M[i,:] .*= factor
-    end
-    M .*= S
+function static_M_matrix!(α::Float64, β::Float64)
+    M = @SMatrix [
+            (β^3)   3.0*α*(β^3) 3.0*(α^2)*(β^3) 1.0*(α^3)*(β^3); 
+            0.0     (β^2)       2.0*α*(β^2)     1.0*(α^2)*(β^2); 
+            0.0     0.0         β               1.0*α*β; 
+            0.0     0.0         0.0             1.0
+            ]    
     return M
 end
