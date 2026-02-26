@@ -26,6 +26,21 @@ include("default derivatives.jl")
 include("Lagrangian/lagrangian structs.jl")
 include("Version 6.2/bps-lagrangian structs.jl")
 
+#The numerics are shared across all methods
+struct LagrangianNumerics{P, A, D}<:NumericalParameters
+    position_method::P
+    auxiliary_method::A
+    derivatives::D
+
+    function LagrangianNumerics(pdmp::PDMP{M, F, D,T};
+        position_method = VTPiecewiseConstant(0.01), 
+        # We assume that we only have one of three methods (SL, CA, FS)
+        auxiliary_method = (M == Version6_2 || M == Lagrangian) ? AutoTsit5(Rosenbrock23()) : Roots.Order1(), 
+        derivatives = default_derivatives(pdmp)
+        ) where {M, F, D, T}
+        new{typeof(position_method), typeof(auxiliary_method), typeof(derivatives)}(position_method, auxiliary_method, derivatives)
+    end
+end
 #Lagrangian and Version 6.2 both use a shared numerics and evolution data structure.
 include("Velocity ODE data/Lagrangian numerics.jl")  
 #Split velocity has its own evolution data.

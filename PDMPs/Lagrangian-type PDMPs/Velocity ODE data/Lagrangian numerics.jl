@@ -1,16 +1,16 @@
-struct LagrangianNumerics{P, A, D}<:NumericalParameters
-    position_method::P
-    auxiliary_method::A
-    derivatives::D
-
-    function LagrangianNumerics(pdmp::PDMP{M, F, D,T};
-        position_method = VTPiecewiseConstant(0.01), 
-        auxiliary_method = (M ≠ SplitVelocity) ? AutoTsit5(Rosenbrock23()) : Roots.Order1(), 
-        derivatives = default_derivatives(pdmp)
-        ) where {M, F, D, T}
-        new{typeof(position_method), typeof(auxiliary_method), typeof(derivatives)}(position_method, auxiliary_method, derivatives)
-    end
-end
+#struct LagrangianNumerics{P, A, D}<:NumericalParameters
+#    position_method::P
+#    auxiliary_method::A
+#    derivatives::D
+#
+#    function LagrangianNumerics(pdmp::PDMP{M, F, D,T};
+#        position_method = VTPiecewiseConstant(0.01), 
+#        auxiliary_method = (M ≠ SplitVelocity) ? AutoTsit5(Rosenbrock23()) : Roots.Order1(), 
+#        derivatives = default_derivatives(pdmp)
+#        ) where {M, F, D, T}
+#        new{typeof(position_method), typeof(auxiliary_method), typeof(derivatives)}(position_method, auxiliary_method, derivatives)
+#    end
+#end
 
 struct VelocityODEData{T, U}
     long_vector::Vector{Float64}
