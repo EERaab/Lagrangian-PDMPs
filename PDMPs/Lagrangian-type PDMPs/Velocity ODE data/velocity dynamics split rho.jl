@@ -89,19 +89,17 @@
 
 
         #Nothing depends on λ_fwd, λ_rev or ψ.
-        for i ∈ axes(J, 1)
-            J[i, 1] = 0.0
-            J[i, 2] = 0.0
-            J[i, 3] = 0.0
-        end
-
+        @views J[:, 1:3] .*= 0.0
+        
         #(dψ/dt)/dv = 2 ⋅ p_tr(Γ)
         @views J[3, 4:end] .= 2.0 .* Γ_trace
 
         #(dv/dt)/dv = -2 (Γv)
         v = @view(u[4:end])
         for j ∈ eachindex(v) #to avoid referring to dim explicitly
-            @views mul!(J[j+3,4:end], (-2.0 .* Γ[j, :, :]), v)
+            @views L = J[j+3,4:end]
+            @views mul!(L, (Γ[j, :, :]), v)
+            L .*= -2.0 
         end
 
         #(dρ/dt)/dv = mess, see docs.

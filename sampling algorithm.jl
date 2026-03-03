@@ -17,7 +17,7 @@ function select_edge_number(segment::Segment{N})::Int64 where N
     s = 0.0
     for i ∈ eachindex(segment.forward_rates::MVector{N, Float64})
         s += segment.forward_rates[i]
-        if q ≤ s
+        if q < s
             return i#The edge: pdmp.graph.edges[state.split_index.x][i]
         end
     end
@@ -66,9 +66,11 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             k += 1
             threshold = thresholds[k]
         end 
+
         verbose ? println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))") : nothing
         is_terminal = evaluate_flow!(threshold, pdmp, segment, state, evo_data, nums, dyn, max_duration = max_time - time, reversed_pdmp = reversed_pdmp)
         time += segment.time
+
         verbose ?  println("Segment after evaluation $segment and time $time") : nothing
         acceptance_exponent += segment.forward_rate_integral - segment.reverse_rate_integral
         
@@ -88,6 +90,7 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             acceptance /= fwd_acceptance(segment, edge_number)
 
             edge = pdmp.graph.edges[state.split_index.x][edge_number]
+
             verbose ? println("Moving through edge number $edge_number from vertex $(state.split_index.x) to $(edge.target_vertex_number)") : nothing
             rev_edge_number = reversed_edge_number(pdmp.graph, edge)
             transition = pdmp.graph.transitions[edge.transition_number]
