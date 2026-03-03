@@ -50,6 +50,10 @@ function auxiliary_kernel!(pdmp::PDMP{M, F, D, T}, state::SplitState, evo_data, 
     L = evo_data.workspace.vector1
     mul!(L, evo_data.core.spectral_data.Q', state.auxiliary)
 
-    return exp(-dot(L, inv(Dinv), L)/2)/sqrt(abs(det(Dinv)))
+    md = evo_data.workspace.vector2
+    md .= L
+    md ./= Dinv.diag
+
+    return exp(-dot(L, md)/2)/sqrt(abs(det(Dinv)))
 end
 
