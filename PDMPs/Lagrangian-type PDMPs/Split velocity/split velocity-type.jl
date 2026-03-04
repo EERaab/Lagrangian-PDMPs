@@ -3,7 +3,7 @@
 end
 
 
-function generate_pdmp_graph(method::Version6_2, target::TargetData{F})::PDMP_DiGraph where F
+function generate_pdmp_graph(method::SplitVelocity, target::TargetData{F})::PDMP_DiGraph where F
     dim = target.dimension
 
     #Vertices
@@ -11,15 +11,16 @@ function generate_pdmp_graph(method::Version6_2, target::TargetData{F})::PDMP_Di
         #Note that in velocity evolution of the j:th component the j:th rate is the probability to go to
         #velocity evolution.
         vertices = [MethodVertex(i, dim) for i in 1:dim]
-        dynamics = [SplitVelocityFlow(i) for i in 1:dim]
+        dynamics = Any[SplitVelocityFlow(i) for i in 1:dim] #a bit ugly
         #We have another evolution for the position
         #In this version we only take 1 evolution (no BPS-type events)
-        push!(vertices, MethodVertex(n+1, 1))
+        push!(vertices, MethodVertex(dim+1, 1))
         push!(dynamics, PositionVelocity())
+        dynamics = tuple(dynamics...)
     ####
 
     #Edges
-        edges = []
+        edges = Vector{MethodEdge}[]
         #Technically we could implement the PDMP graph as a  (bi-directionally) complete (loop-free) digraph.
         #This is awfully tedious to construct for big dimensions, but whatever. 
 

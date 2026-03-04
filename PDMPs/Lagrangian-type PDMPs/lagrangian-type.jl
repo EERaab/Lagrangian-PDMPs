@@ -25,6 +25,7 @@ include("default derivatives.jl")
 #The specifics of each method is contained in separate structures.
 include("Lagrangian/lagrangian structs.jl")
 include("Version 6.2/bps-lagrangian structs.jl")
+include("Split velocity/split velocity-type.jl")
 
 #The numerics are shared across all methods
 struct LagrangianNumerics{P, A, D}<:NumericalParameters
@@ -41,12 +42,12 @@ struct LagrangianNumerics{P, A, D}<:NumericalParameters
         new{typeof(position_method), typeof(auxiliary_method), typeof(derivatives)}(position_method, auxiliary_method, derivatives)
     end
 end
+
 #Lagrangian and Version 6.2 both use a shared numerics and evolution data structure.
 include("Velocity ODE data/Lagrangian numerics.jl")  
-#Split velocity has its own evolution data.
-#include("Thingamajig")
 
-
+#Correspondingly the split method has its own numerics and evo data.
+include("Split velocity/evo data.jl")
 
 function initialize_evolution_data(pdmp::PDMP{M, F, D, T}, nums::NumericalParameters) where {M<:Lagrangian_Method, F, D, T}
     if M == Lagrangian || M == Version6_2

@@ -1,35 +1,3 @@
-struct SplitEvoData{S, PD, T, N}
-    segments::S
-    core::LagrangianCoreData{PD, T}
-    workspace::LagrangianWorkspaceVariables{N}
-    split_data::SplitVelocityData
-
-    function SplitEvoData(pdmp::PDMP)
-        return SplitEvoData(pdmp.target.dimension)
-    end
-
-    function SplitEvoData(dim::Integer)
-        segments = Dict{Int64, Segment{dim}}((dim) => Segment{dim}())
-        core = LagrangianCoreData(dim)
-        workspace = LagrangianWorkspaceVariables(dim)
-        split_data = SplitVelocityData(dim)
-        new(segments, core, workspace, split_data)
-    end
-end
-
-
-#This method is exactly analogous to the method for Lagrangian or Version6.2
-function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::NumericalParameters, state::SplitState, dyn::SplitVelocity)
-    #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
-    fetch_point_data!(evo_data.core.point_data, pdmp, state, numerics.derivatives, dyn)
-
-    #The point data is processed through an eigendecomposition, which is used to define the spectral data (Q, QT, Dinv, J).
-    hessian = evo_data.core.point_data.velocity_update_data.value
-    fetch_spectral_data!(evo_data.core.spectral_data, hessian, pdmp.method.hardness)
-
-    fetch_evo_tensors!(evo_data, pdmp.target.dimension)
-    nothing
-end
 
 struct SplitVelocityData
     velocity_partition::BinaryMinHeap{Tuple{Float64, Int64}}
@@ -53,6 +21,40 @@ struct SplitVelocityData
         return new(velocity_partition, reduced_v, signed_rho_J, As, sign_vector, M_adj_rhoJ)#, M_matrix)
     end
 end
+
+struct SplitEvoData{S, PD, T, N}
+    segments::S
+    core::LagrangianCoreData{PD, T}
+    workspace::LagrangianWorkspaceVariables{N}
+    split_data::SplitVelocityData
+
+    function SplitEvoData(dim::Integer)
+        segments = Dict{Int64, Segment{dim}}((dim) => Segment{dim}())
+        core = LagrangianCoreData(dim)
+        workspace = LagrangianWorkspaceVariables(dim)
+        split_data = SplitVelocityData(dim)
+        return new{typeof(segments), typeof(core.point_data), typeof(core.evo_tensors), dim}(segments, core, workspace, split_data)
+    end
+
+    function SplitEvoData(pdmp::PDMP)
+        return SplitEvoData(pdmp.target.dimension)
+    end
+end
+
+
+#This method is exactly analogous to the method for Lagrangian or Version6.2
+function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::NumericalParameters, state::SplitState, dyn::SplitVelocity)
+    #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
+    fetch_point_data!(evo_data.core.point_data, pdmp, state, numerics.derivatives, dyn)
+
+    #The point data is processed through an eigendecomposition, which is used to define the spectral data (Q, QT, Dinv, J).
+    hessian = evo_data.core.point_data.velocity_update_data.value
+    fetch_spectral_data!(evo_data.core.spectral_data, hessian, pdmp.method.hardness)
+
+    fetch_evo_tensors!(evo_data, pdmp.target.dimension)
+    nothing
+end
+
 
 
 #Computing the objects A^{(n)}_{I;J} for I ≠ J. Stored as a matrix, As[I, n] = A^{(n)}_{I;J}.

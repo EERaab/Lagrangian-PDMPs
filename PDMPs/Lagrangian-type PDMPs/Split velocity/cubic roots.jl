@@ -175,25 +175,3 @@
         return partition_by_roots!(evo_data.velocity_partition, J, evo_data.signed_rho_J, dir, u0)
     end
 ####
-
-# A test that should be moved into a separate folder.
-if false #Move to test
-    D = 21
-    T = BinaryMinHeap{Tuple{Float64, Int64}}()
-    ρ = randn(21, 4);
-    u0 = rand()
-    T = partition_by_roots!(T, 1, ρ, 1, u0)
-
-    function generate_3_root_polynomial(α, β, γ; pref = 1.0)
-        return (1.0, -α-β-γ ,α*β + α*γ +β*γ, -α*β*γ) .* pref
-    end
-
-    g3(a,b,c) = generate_3_root_polynomial(a,b,c)
-
-    ρ = rand(3, 4)
-    ρ[1,:] .= g3(1.,2.,3.)
-    ρ[2,:] .= g3(-1.,2.,3.)
-    ρ[3,:] .= g3(-4.,-0.5,30.1)
-
-    partition_by_roots!(T, 1, ρ, -1, -0.5)
-end
