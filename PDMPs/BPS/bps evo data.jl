@@ -27,6 +27,10 @@ struct BPSEvoData{S, N}<:EvolutionData
     end
 end
 
+function initialize_evolution_data(pdmp::PDMP{BPS, F, D, T}, nums::NumericalParameters) where {F, D, T}
+    return BPSEvoData(pdmp.target.dimension)
+end
+
 #function initialize_evolution_data(pdmp::PDMP{BPS, F, D, T}, nums::NumericalParameters) where {F, D, T}
 #    grad = zeros(Float64, pdmp.target.dimension)
 #    seg_dict = Dict{Int64, Segment{1}}(1=>Segment{1}())
