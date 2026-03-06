@@ -1,9 +1,9 @@
 
 function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, state::SplitState, evo_data::EvolutionData, 
-    numerics::NumericalParameters, dyn::SplitVelocityFlow; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false)
+    numerics::NumericalParameters, dyn::SplitVelocityFlow; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
     
     #We fetch the core data -  evo_tensors etc
-    fetch_core_data!(evo_data, numerics) 
+    fetch_core_data!(evo_data, numerics) #this shouldn't always be called!!!!! Note that velocity->velocity implies that we do not recompute derivatives!
 
     # We get the relevant split parameters 
     (dir, param, flow_class, F_positive, F_negative) = fetch_split_data!(pdmp, evo_data, numerics, state, dyn; reversed_pdmp = reversed_pdmp) #
@@ -74,10 +74,10 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
 
         #We evaluate the rate integral over the interval [t_prev, t]
         t_prev = t
-        G_t_prev = G(t_prev; (flow_type, param, 0)) 
+        G_t_prev = G(t_prev, p=(flow_type, param, 0)) 
         
         t = evaluate_inverse(flow_class, u, param)
-        G_t = G(t; (flow_type, param, 0))
+        G_t = G(t, p = (flow_type, param, 0))
                
         ΔG = G_t .- G_t_prev
 
@@ -95,7 +95,7 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
 
                 #We compute the ΔG for the final time.
                 t = evaluate_inverse(flow_class, u, param)
-                G_t = G(t; (flow_type, param, 0))
+                G_t = G(t, p=(flow_type, param, 0))
                 
                 #We update the reverse rate integral. 
                 ΔG = G_t .- G_t_prev
@@ -118,8 +118,8 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
             @views F_positive -= M_adj_rho[K,:]
             @views F_negative += M_adj_rho[K,:]
         else
-            #sign_vector = 0 can technically happen, but should not (with prob 0). We throw an error for now.
-            error("Zero sign vector! Can happen, but should not, generally.")
+            #sign_vector = 0 can technically happen, but should not (likely with prob 0). We throw an error for now.
+            error("Zero sign vector! *Can* happen, but should not, generally.")
         end
         sign_vector[K] = -sign_vector[K]
     end
@@ -175,7 +175,7 @@ end
 function stationary_flow(threshold, F_positive, F_negative, sign_vector, ini_u_tuple)
     if !any(sign_vector .> 0)
         #If we had introduced a time in the velocities this wouldn't be a problem (though bad still)
-        error("No positive rates - point must be rejected,")
+        error("No positive rates - point must be rejected.")
     end
     ∂Λ = dot(F_positive, ini_u_tuple)
     if iszero(∂Λ)

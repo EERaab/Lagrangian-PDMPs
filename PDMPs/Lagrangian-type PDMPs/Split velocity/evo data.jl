@@ -22,7 +22,7 @@ struct SplitVelocityData
     end
 end
 
-struct SplitEvoData{S, PD, T, N}
+struct SplitEvoData{S, PD, T, N} <:EvolutionData
     segments::S
     core::LagrangianCoreData{PD, T}
     workspace::LagrangianWorkspaceVariables{N}
