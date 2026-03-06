@@ -3,7 +3,7 @@ function evaluate_flow!(threshold::Float64, pdmp::PDMP, segment::Segment{N}, sta
     numerics::NumericalParameters, dyn::SplitVelocityFlow; max_duration::Float64 = 0.0, reversed_pdmp::Bool = false) where N
     
     #We fetch the core data -  evo_tensors etc
-    fetch_core_data!(evo_data, numerics) #this shouldn't always be called!!!!! Note that velocity->velocity implies that we do not recompute derivatives!
+    fetch_core_data!(pdmp, evo_data, numerics, state, dyn) #this shouldn't always be called!!!!! Note that velocity->velocity implies that we do not recompute derivatives!
 
     # We get the relevant split parameters 
     (dir, param, flow_class, F_positive, F_negative) = fetch_split_data!(pdmp, evo_data, numerics, state, dyn; reversed_pdmp = reversed_pdmp) #
