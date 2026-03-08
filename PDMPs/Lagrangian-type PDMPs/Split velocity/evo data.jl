@@ -1,6 +1,6 @@
 
 struct SplitVelocityData
-    velocity_partition::BinaryMinHeap{Tuple{Float64, Int64}}
+    velocity_partition::BinaryMinMaxHeap{Tuple{Float64, Int64}}
     reduced_v::Vector{Float64}
     signed_rho_J::Matrix{Float64} #Could be tuple of static vectors!
     As::Matrix{Float64} #Could be tuple of statics!
@@ -11,7 +11,7 @@ struct SplitVelocityData
     #F_negative::MVector{4, Float64}
 
     function SplitVelocityData(dim)
-        velocity_partition = BinaryMinHeap{Tuple{Float64, Int64}}()
+        velocity_partition = BinaryMinMaxHeap{Tuple{Float64, Int64}}()
         reduced_v = zeros(Float64, dim)
         signed_rho_J = zeros(Float64, dim + 1, 4)
         As = zeros(Float64, dim + 1, 4)
@@ -20,6 +20,13 @@ struct SplitVelocityData
         #M_matrix = @MMatrix zeros(Float64, 4, 4)
         return new(velocity_partition, reduced_v, signed_rho_J, As, sign_vector, M_adj_rhoJ)#, M_matrix)
     end
+end
+
+function popnext!(T::BinaryMinMaxHeap, dir)
+    if dir > 0
+        return popmin!(T)
+    end
+    return popmax!(T)
 end
 
 struct SplitEvoData{S, PD, T, N} <:EvolutionData
@@ -43,7 +50,7 @@ end
 
 
 #This method is exactly analogous to the method for Lagrangian or Version6.2
-function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::NumericalParameters, state::SplitState, dyn::SplitVelocity)
+function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::NumericalParameters, state::SplitState, dyn::SplitVelocityFlow)
     #We determine the values of the Hessian, its Jacobian, and other relevant data at the point X.
     fetch_point_data!(evo_data.core.point_data, pdmp, state, numerics.derivatives, dyn)
 
@@ -55,12 +62,27 @@ function fetch_core_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics::Numerica
     nothing
 end
 
+#For ForwardDiff we use this function to fetch point data.
+function fetch_point_data!(point_data::PointData, pdmp::PDMP, state::SplitState, derivatives::LagrangianDerivatives, dyn::SplitVelocityFlow)
+
+    if derivatives.hessian_computed_in_higher_order
+        derivatives.full_third_order!(point_data.velocity_update_data, state.position)
+    else
+        derivatives.full_third_order!(point_data.velocity_update_data.derivs[1], state.position)
+        derivatives.hessian!(point_data.velocity_update_data.value, state.position)
+    end
+
+
+    derivatives.gradient!(point_data.gradient, state.position)
+    
+    nothing
+end
 
 
 #Computing the objects A^{(n)}_{I;J} for I ≠ J. Stored as a matrix, As[I, n] = A^{(n)}_{I;J}.
-function fetch_divergences!(dim, J, evo_data)
-    A = evo_data.split.As
-    reduced_v = evo_data.split.reduced_v
+function fetch_divergences!(dim, J, evo_data::SplitEvoData)
+    A = evo_data.split_data.As
+    reduced_v = evo_data.split_data.reduced_v
 
     #reduced_v .= velocity
     #reduced_v[J] = 0.0
@@ -68,7 +90,7 @@ function fetch_divergences!(dim, J, evo_data)
     Γ = evo_data.core.evo_tensors.Γ
     G = evo_data.core.evo_tensors.metric
     G_inv = evo_data.core.evo_tensors.metric_inv
-    ∇φ = error("Not properly implemented yet -throwing error to avoid troubles later")#evo_data.core.evo_tensors.gradient - Ginv*Γ_trace or something like that.
+    ∇φ = - evo_data.core.evo_tensors.gradient +  evo_data.core.evo_tensors.Γ_trace #the Lagrangian case - no BPS events.
     
     @views A[dim+1, :] .= 0.0
 
@@ -103,7 +125,7 @@ function fetch_signed_rho!(ρJ, J, A, dim; reversed_pdmp = false)
         end
     end
 
-    @views ρJ[n+1, :] .= (-A[n+1,:] ./ dim) 
+    @views ρJ[dim+1, :] .= ( -A[dim + 1,:] ./ dim) 
 
     if reversed_pdmp
         return -ρJ
@@ -118,7 +140,7 @@ function fetch_velocity_parameters!(evo_data::SplitEvoData, J; reversed_pdmp::Bo
     evo_tensors = evo_data.core.evo_tensors
     Γ = evo_tensors.Γ
     Ginv = evo_tensors.metric_inv
-    ∇φ = error("Not properly implemented yet -throwing error to avoid troubles later")
+    ∇φ = - evo_data.core.evo_tensors.gradient +  evo_data.core.evo_tensors.Γ_trace #the Lagrangian case - no BPS events.
 
     a = -Γ[J,J,J] 
 
@@ -171,10 +193,10 @@ function fetch_split_data!(pdmp::PDMP, evo_data::SplitEvoData, numerics, state, 
         M_matrix = static_M_matrix!(α, β)
 
         #We build the M-adjusted ρJ:
-        #OPTIMIZE: Build the transpose instead of M to avoid transposition & consider column-major
-        mul!(M_adj_ρJ, M_matrix', ρJ)
+        mul!(M_adj_ρJ, ρJ, M_matrix)
         
         #From the ρJ we compute the F-vectors and sign vectors.
+        u0 = state.auxiliary[J]
         ini_u_tuple = (u0^3, u0^2, u0, 1.0) 
         fetch_sign_vector!(evo_data, ini_u_tuple, J)
         
@@ -187,8 +209,8 @@ end
 
 
 function fetch_sign_vector!(evo_data::SplitEvoData, u0_tuple, J)
-    sign_vector = evo_data.sign_vector #i.e. the initial rates
-    M_adj_ρJ = evo_data.M_adj_rhoJ
+    sign_vector = evo_data.split_data.sign_vector #i.e. the initial rates
+    M_adj_ρJ = evo_data.split_data.M_adj_rhoJ
     for I in eachindex(sign_vector)
         if I ≠ J
             sign_vector[I] = sgn(dot(@view(M_adj_ρJ[I, :]), u0_tuple))
@@ -201,10 +223,10 @@ function fetch_sign_vector!(evo_data::SplitEvoData, u0_tuple, J)
 end
 
 function fetch_F_vectors!(evo_data, J)
-    split_data = evo_data.split_data
-    F_positive = @SVector zeros(Float64,4)#split_data.F_positive 
-    F_negative = @SVector zeros(Float64,4)#split_data.F_negative
-    M_adj_rho = split_data.M_adj_rhoJ
+    F_positive = @SVector zeros(Float64, 4)#split_data.F_positive 
+    F_negative = @SVector zeros(Float64, 4)#split_data.F_negative
+    M_adj_rho = evo_data.split_data.M_adj_rhoJ
+    sign_vector = evo_data.split_data.sign_vector
 
     for I in eachindex(sign_vector)
         if iszero(sign_vector[I]) 
@@ -248,11 +270,18 @@ function M_matrix_parameters(flow_class::VelocityFunctions, param)::Tuple{Float6
 end
 
 function static_M_matrix!(α::Float64, β::Float64)
+    #M = @SMatrix [
+    #        (β^3)   3.0*α*(β^3) 3.0*(α^2)*(β^3) 1.0*(α^3)*(β^3); 
+    #        0.0     (β^2)       2.0*α*(β^2)     1.0*(α^2)*(β^2); 
+    #        0.0     0.0         β               1.0*α*β; 
+    #        0.0     0.0         0.0             1.0
+    #        ]    
+    #Have to be double check transpositions here.
     M = @SMatrix [
-            (β^3)   3.0*α*(β^3) 3.0*(α^2)*(β^3) 1.0*(α^3)*(β^3); 
-            0.0     (β^2)       2.0*α*(β^2)     1.0*(α^2)*(β^2); 
-            0.0     0.0         β               1.0*α*β; 
-            0.0     0.0         0.0             1.0
+            (β^3)               0.0             0.0     0.0;
+            3.0*α*(β^3)         (β^2)           0.0     0.0;
+            3.0*(α^2)*(β^3)     2.0*α*(β^2)     β       0.0;
+            1.0*(α^3)*(β^3)     1.0*(α^2)*(β^2) 1.0*α*β 1.0
             ]    
     return M
 end

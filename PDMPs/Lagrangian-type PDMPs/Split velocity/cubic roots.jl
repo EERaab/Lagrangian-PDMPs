@@ -156,7 +156,7 @@
 
 # A function that creates a partition of (u0, ∞) (or  (-∞, u0) if dir = -1) by dividing when any
 # cubic polynomial (coefficients corresponding to a row vector of ρJ) changes its sign.
-    function partition_by_roots!(T::BinaryMinHeap, J::Integer, ρJ::Array{Float64, 2}, dir::Integer, u0::Float64) 
+    function partition_by_roots!(T::BinaryMinMaxHeap, J::Integer, ρJ::Array{Float64, 2}, dir::Integer, u0::Float64) 
         empty!(T)
         if dir == 0 
             return T
@@ -172,6 +172,6 @@
     end
     
     function partition_by_roots!(J::Integer, evo_data::SplitEvoData, dir::Integer, u0::Float64) 
-        return partition_by_roots!(evo_data.velocity_partition, J, evo_data.signed_rho_J, dir, u0)
+        return partition_by_roots!(evo_data.split_data.velocity_partition, J, evo_data.split_data.signed_rho_J, dir, u0)
     end
 ####
