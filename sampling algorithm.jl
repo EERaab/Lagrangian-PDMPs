@@ -1,14 +1,34 @@
 #The acceptance rate for each of our pdmps is (structurally) the same
 #(Valid since for each i P_i(t<T) = exp(-∫_[0,T] λ_i(t) dt))
 ####################################################################################################
+
+
+"""
+    fwd_acceptance(segment::Segment, edge_number::Integer)::Float64
+
+Returns the forward acceptance rate of the edge with number 'edge_number' along 'segment'. 
+"""
+#Currently a trivial function, due to convenient structural choices, but can in theory become complicated.
 function fwd_acceptance(segment::Segment, edge_number::Integer)::Float64
     return segment.forward_rates[edge_number]::Float64
 end
 
+"""
+    rev_acceptance(segment::Segment, edge_number::Integer)::Float64
+
+Returns the reverse acceptance rate of the edge with number 'edge_number' along 'segment'. 
+"""
 function rev_acceptance(segment::Segment, edge_number::Integer)::Float64
     return segment.reverse_rates[edge_number]::Float64
 end
 
+"""
+    select_edge_number(segment::Segment{N})::Int64 where N
+
+Returns an edge number given the path segment 'segment'.
+
+This is a stochastic function, sampling edges according to their probability as prescribed in 'segment'.
+"""
 function select_edge_number(segment::Segment{N})::Int64 where N
     if N == 1
         return 1
@@ -28,6 +48,14 @@ end
 ####################################################################################################
 
 
+"""
+    full_density_kernel!(pdmp::PDMP, state::SplitState, evolution_data::EvolutionData, numerics::NumericalParameters)
+
+Returns the density kernel of the the combined measure μ(x,v), where x, v are encoded in 'state' and the target in 'pdmp'.
+
+The measure μ is defined by log μ(x) = log π(x) (where log π is the target) and v|x being 
+normal-distributed with mean zero and covariance inv(G(x)), where G(x) is the soft absolute metric at x.
+"""
 function full_density_kernel!(pdmp::PDMP, state::SplitState, evolution_data::EvolutionData, numerics::NumericalParameters)
     return exp(pdmp.target.log_density(state.position))*auxiliary_kernel!(pdmp, state, evolution_data, numerics)
 end
@@ -40,7 +68,28 @@ end
 #Rather we have to look at all transitions out of a segment and then adjust the acceptance accordingly.
 #This cause a lot of clunkiness unfortunately (reverse edges, initial/final trackers etc)
 
-function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64; verbose = false, reversed_pdmp::Bool = rand(Bool), thresholds = nothing)
+"""
+    new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64; verbose::Bool = false, reversed_pdmp::Bool = rand(Bool), thresholds = nothing)
+
+In-place fixed-duration simulation of a (split) PDMP 'pdmp' for the state 'state', and returns the associated Metropolis-Hastings acceptance rate for the end state.
+
+# Arguments
+- `pdmp::PDMP`: the (split) PDMP to simulate.
+- `state::SplitState`: the initial state of the pdmp, i.e. position, velocity and split index (x, v, α).
+- `evo_data::EvolutionData`: the evolution data, encoding numerical information about the simulation.
+- `nums::NumericalParameters`: the numerical parameters, describing how the simulation is run.
+- `max_time::Float64`: the duration of simulation before we return a point.
+- `verbose::Bool = false`: allows some optional printing to partially explore simulation process.
+- `reversed_pdmp::Bool = rand(Bool)`: whether to simulate the reversal of the input pdmp or not. 
+- `thresholds = nothing`: if a list of positive floats is provided, these are used as thresholds for the PDMP flow simulations (described below).
+
+The state is altered in-place throughout the simulation. The function is stochastic in that it by default randomly picks the PDMP or its reversed form.
+Moreover the event times are indirectly randomly generated unless a list of Float64 threshold values for forward rate integrals are given in 'thresholds'.
+Note that such an array must be longer than the number of events which generally cannot be precomputed. 
+
+See also [`evaluate_flow!`](@ref), [`algorithm`](@ref).
+"""
+function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums::NumericalParameters, max_time::Float64; verbose::Bool = false, reversed_pdmp::Bool = rand(Bool), thresholds = nothing)
     #We start our "clock" at t = 0 and terminate at t = max_time
     time = 0.0
     
@@ -64,7 +113,13 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
             threshold = -log(rand())
         else
             k += 1
-            threshold = thresholds[k]
+            try
+                threshold = thresholds[k]
+            catch 
+                #Should force threshold to be not a list but a generator!!!!!
+                threshold = -log(rand())                
+                verbose ? @warn("Threshold list length exceeded, using randomly generated threshold.") : nothing  
+            end
         end 
 
         verbose ? println("Running $dyn with threshold $threshold on state $((state.position, state.auxiliary))") : nothing
@@ -113,6 +168,25 @@ function new_point!(pdmp::PDMP, state::SplitState, evo_data::EvolutionData, nums
     return acceptance
 end 
 
+"""
+    algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::Integer = 10, max_time::Float64 = 1.0, initial_state::Union{Nothing, SplitState} = nothing, evo_data::EvolutionData = initialize_evolution_data(pdmp, nums))
+
+Simulates a PDMP using Metropolis-Hastings method to iteratively generate random samples from a target distribution defined in 'pdmp'.
+
+# Arguments
+- `pdmp::PDMP`: the (split) PDMP to simulate.
+- `nums::NumericalParameters`: the numerical parameters, describing how the simulation is run.
+- `max_point_attempts::Integer = 10`: the number of times the algorithm attempts to generate a new sample.
+- `max_time::Float64 = 1.0`: the duration for which the PDMP is simulated before suggesting a sample.
+- `initial_state::Union{Nothing, SplitState} = nothing,`: allows a user to optionally provide an initial state, otherwise one is randomly generated.
+- `evo_data::EvolutionData = initialize_evolution_data(pdmp, nums)`: allows the user to pre-allocate evolution data for the simulation.
+
+The state is altered in-place throughout the simulation. The function is stochastic due to the stochastic nature of `new_point!`. 
+Moreover, unless an initial state is given, one is randomly generated. 
+
+See also [`evaluate_flow!`](@ref), [`new_point!`](@ref).
+
+"""
 function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::Integer = 10, max_time::Float64 = 1.0, initial_state::Union{Nothing, SplitState} = nothing, evo_data::EvolutionData = initialize_evolution_data(pdmp, nums))
     k = 0
     samples = Vector{Float64}[]
@@ -133,7 +207,7 @@ function algorithm(pdmp::PDMP, nums::NumericalParameters; max_point_attempts::In
         
         acceptance = min(1., acceptance)
         if isnan(acceptance) #corresponds to fwd_acceptance = 0
-            acceptance = 0 
+            acceptance = 0.
         end
         push!(acceptances, acceptance)
 
